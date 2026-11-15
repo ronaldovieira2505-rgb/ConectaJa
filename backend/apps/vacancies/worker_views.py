@@ -38,6 +38,19 @@ class WorkerAreaView(APIView):
         return getattr(request.user, "worker", None)
 
 
+def _cancel_info(assignment, params, now):
+    """Botão "Cancelar participação" (US72): só em `CONFIRMADA`, com aviso se for tardio."""
+    can_cancel = assignment.status == AS.CONFIRMED
+    late = can_cancel and assignments.is_late_worker_cancel(
+        assignment.vacancy, now=now, params=params
+    )
+    return {
+        "can_cancel": can_cancel,
+        "cancel_is_late": late,
+        "cancel_warning": assignments.late_cancel_warning(params) if late else "",
+    }
+
+
 def _execution_info(assignment, params, now):
     """Janela de check-in e horários registrados, para os botões de "Meus trabalhos"."""
     vacancy = assignment.vacancy
@@ -48,6 +61,7 @@ def _execution_info(assignment, params, now):
         "check_in_closes_at": closes_at.isoformat(),
         "can_check_in": assignment.status == AS.CONFIRMED and opens_at <= now <= closes_at,
         "can_check_out": assignment.status == AS.IN_PROGRESS,
+        **_cancel_info(assignment, params, now),
         "check_in_at": assignment.check_in_at and assignment.check_in_at.isoformat(),
         "check_out_at": assignment.check_out_at and assignment.check_out_at.isoformat(),
         "check_out_auto": assignment.check_out_auto,
@@ -191,6 +205,14 @@ class AssignmentCheckInView(AssignmentActionView):
         if lat is None or lng is None:
             raise DomainError("Informe a sua localização para registrar a chegada.")
         return assignments.check_in(assignment, lat=lat, lng=lng, actor=request.user)
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AssignmentCancelByWorkerView(AssignmentActionView):
+    """`POST /api/assignments/<id>/cancel-by-worker/`: cancela a própria alocação (US72)."""
+
+    def run(self, request, assignment):
+        return assignments.cancel_by_worker(assignment, actor=request.user)
 
 
 @method_decorator(csrf_protect, name="dispatch")

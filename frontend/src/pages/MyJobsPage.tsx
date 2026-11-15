@@ -40,6 +40,7 @@ export default function MyJobsPage() {
   >({})
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
+  const [cancellingId, setCancellingId] = useState<number | null>(null)
 
   function load() {
     return api<MyJobs>('/api/workers/me/jobs/')
@@ -100,6 +101,19 @@ export default function MyJobsPage() {
     setBusyId(item.id)
     try {
       await api(`/api/assignments/${item.id}/check-out/`, { method: 'POST' })
+      await load()
+    } catch (err) {
+      say(item, 'error', (err as Error).message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function cancelParticipation(item: JobItem) {
+    setCancellingId(null)
+    setBusyId(item.id)
+    try {
+      await api(`/api/assignments/${item.id}/cancel-by-worker/`, { method: 'POST' })
       await load()
     } catch (err) {
       say(item, 'error', (err as Error).message)
@@ -191,6 +205,33 @@ export default function MyJobsPage() {
                       ) : (
                         <div className="acoes">
                           <Button onClick={() => setConfirmingId(item.id)}>Encerrar turno</Button>
+                        </div>
+                      ))}
+                    {item.can_cancel &&
+                      (cancellingId === item.id ? (
+                        <>
+                          <Alert tone={item.cancel_is_late ? 'error' : 'success'}>
+                            {item.cancel_is_late
+                              ? item.cancel_warning
+                              : 'Cancelando agora você não sofre penalidade.'}
+                          </Alert>
+                          <div className="acoes">
+                            <Button
+                              busy={busyId === item.id}
+                              onClick={() => cancelParticipation(item)}
+                            >
+                              Confirmar cancelamento
+                            </Button>
+                            <Button variant="secondary" onClick={() => setCancellingId(null)}>
+                              Voltar
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="acoes">
+                          <Button variant="secondary" onClick={() => setCancellingId(item.id)}>
+                            Cancelar participação
+                          </Button>
                         </div>
                       ))}
                     {notes[item.id] && (
