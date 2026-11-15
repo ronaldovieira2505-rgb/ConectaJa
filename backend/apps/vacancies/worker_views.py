@@ -65,6 +65,9 @@ def _execution_info(assignment, params, now):
         "check_in_at": assignment.check_in_at and assignment.check_in_at.isoformat(),
         "check_out_at": assignment.check_out_at and assignment.check_out_at.isoformat(),
         "check_out_auto": assignment.check_out_auto,
+        "contest_reason": (
+            assignments.contest_reason(assignment) if assignment.status == AS.CONTESTED else ""
+        ),
     }
 
 

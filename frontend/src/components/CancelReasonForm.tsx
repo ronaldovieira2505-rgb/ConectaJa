@@ -4,10 +4,14 @@ import { Button, Field } from './ui'
 /** Pede o motivo (obrigatório) e confirma um cancelamento feito pela empresa (US71). */
 export default function CancelReasonForm({
   confirmLabel,
+  label = 'Motivo do cancelamento',
+  emptyMessage = 'Informe o motivo do cancelamento.',
   onConfirm,
   onBack,
 }: {
   confirmLabel: string
+  label?: string
+  emptyMessage?: string
   onConfirm: (reason: string) => Promise<void> | void
   onBack: () => void
 }) {
@@ -18,7 +22,7 @@ export default function CancelReasonForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!reason.trim()) {
-      setError('Informe o motivo do cancelamento.')
+      setError(emptyMessage)
       return
     }
     setError('')
@@ -33,7 +37,7 @@ export default function CancelReasonForm({
   return (
     <form onSubmit={submit} noValidate>
       <Field
-        label="Motivo do cancelamento"
+        label={label}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         aria-invalid={error ? true : undefined}

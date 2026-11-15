@@ -46,6 +46,7 @@ def serialize_pending_assignment(assignment, params, now):
         "status_label": assignment.get_status_display(),
         "auto_approve_at": auto_approve_at.isoformat(),
         "auto_approve_in_seconds": remaining,
+        "can_contest": assignments.can_contest(assignment, now=now, params=params),
     }
 
 
@@ -114,6 +115,43 @@ class AssignmentApproveView(CompanyAreaView):
                 "status": assignment.status,
                 "status_label": assignment.get_status_display(),
                 "payment_pending": payment_pending,
+            }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AssignmentContestView(CompanyAreaView):
+    """`POST /api/assignments/<id>/contest/` com `{"reason": "..."}` (US57).
+
+    Só a empresa dona da vaga (outra responde 404). Motivo vazio: 400. Fora de
+    `AGUARDANDO_VALIDACAO` ou com a janela de contestação encerrada: 409.
+    """
+
+    def post(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company)
+        if denied:
+            return denied
+        assignment = (
+            Assignment.objects.select_related("vacancy__company", "worker__user")
+            .filter(pk=pk, vacancy__company=company)
+            .first()
+        )
+        if assignment is None:
+            return Response({"detail": NOT_FOUND}, status=404)
+        reason = request.data.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+        try:
+            assignment = assignments.contest(assignment, reason=reason, actor=request.user)
+        except DomainError as error:  # inclui InvalidTransition
+            status = 400 if not reason.strip() else 409
+            return Response({"detail": str(error)}, status=status)
+        return Response(
+            {
+                "id": assignment.pk,
+                "status": assignment.status,
+                "status_label": assignment.get_status_display(),
             }
         )
 

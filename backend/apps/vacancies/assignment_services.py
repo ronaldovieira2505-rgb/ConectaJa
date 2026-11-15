@@ -165,15 +165,55 @@ def auto_approve_hours(assignment, *, now=None):
     return assignment
 
 
+def contest_deadline(assignment, params=None):
+    """Fim da janela de contestação (`contest_window_minutes` após o check-out)."""
+    params = params or PlatformParameters.get()
+    if assignment.check_out_at is None:
+        return None
+    return assignment.check_out_at + timedelta(minutes=params.contest_window_minutes)
+
+
+def can_contest(assignment, *, now=None, params=None):
+    """A empresa só contesta enquanto aguarda validação e dentro da janela."""
+    if assignment.status != S.AWAITING_VALIDATION:
+        return False
+    deadline = contest_deadline(assignment, params)
+    return deadline is None or (now or timezone.now()) <= deadline
+
+
+def contest_reason(assignment):
+    """Motivo informado pela empresa na última contestação da alocação."""
+    entry = (
+        StateTransition.objects.filter(
+            entity_type="Assignment", entity_id=assignment.pk, to_state=S.CONTESTED
+        )
+        .order_by("-created_at", "-id")
+        .first()
+    )
+    return entry.reason if entry else ""
+
+
 @transaction.atomic
 def contest(assignment, *, reason, actor=None, now=None):
-    if not reason.strip():
+    """Empresa contesta as horas (AGUARDANDO_VALIDACAO → CONTESTADA) dentro da janela."""
+    now = now or timezone.now()
+    reason = (reason or "").strip()
+    if not reason:
         raise DomainError("Informe o motivo da contestação.")
+    ASSIGNMENT_MACHINE.validate(assignment.status, S.CONTESTED)
+    if not can_contest(assignment, now=now):
+        raise DomainError("O prazo para contestar as horas já terminou.")
     assignment = transition(
         assignment, ASSIGNMENT_MACHINE, S.CONTESTED, actor=actor, reason=reason, now=now
     )
-    message = f"A empresa contestou as horas de “{assignment.vacancy.title}”."
-    notify(assignment.worker.user, "CONTESTACAO", "Horas contestadas", message)
+    message = f"A empresa contestou as horas de “{assignment.vacancy.title}”. Motivo: {reason}"
+    notify(
+        assignment.worker.user,
+        "CONTESTACAO",
+        "Horas contestadas",
+        message,
+        link="/meus-trabalhos",
+    )
     notify_admins("CONTESTACAO", "Nova contestação", message)
     return assignment
 
@@ -181,10 +221,12 @@ def contest(assignment, *, reason, actor=None, now=None):
 @transaction.atomic
 def resolve_contest(assignment, *, in_favor_of_worker, reason, actor, now=None):
     """Admin decide: a favor do prestador → APROVADA; da empresa → ESTORNADA."""
-    if not reason.strip():
+    reason = (reason or "").strip()
+    if not reason:
         raise DomainError("O motivo é obrigatório.")
+    vacancy = assignment.vacancy
     if in_favor_of_worker:
-        return transition(
+        assignment = transition(
             assignment,
             ASSIGNMENT_MACHINE,
             S.APPROVED,
@@ -194,13 +236,41 @@ def resolve_contest(assignment, *, in_favor_of_worker, reason, actor, now=None):
             validated_at=now or timezone.now(),
             validated_by=actor,
         )
-    ASSIGNMENT_MACHINE.validate(assignment.status, S.REFUNDED)
-    payments.refund_assignment(
-        assignment.vacancy.custody, assignment, actor=actor, reason=reason, now=now
+        worker_message = (
+            f"A contestação das horas de “{vacancy.title}” foi decidida a seu favor. "
+            f"O pagamento será liberado. Motivo: {reason}"
+        )
+        company_message = (
+            f"A contestação das horas de “{vacancy.title}” foi decidida a favor do prestador. "
+            f"Motivo: {reason}"
+        )
+    else:
+        ASSIGNMENT_MACHINE.validate(assignment.status, S.REFUNDED)
+        payments.refund_assignment(
+            vacancy.custody, assignment, actor=actor, reason=reason, now=now
+        )
+        assignment = transition(
+            assignment, ASSIGNMENT_MACHINE, S.REFUNDED, actor=actor, reason=reason, now=now
+        )
+        worker_message = (
+            f"A contestação das horas de “{vacancy.title}” foi decidida a favor da empresa. "
+            f"Motivo: {reason}"
+        )
+        company_message = (
+            f"A contestação das horas de “{vacancy.title}” foi decidida a seu favor. "
+            f"O valor da posição foi devolvido. Motivo: {reason}"
+        )
+    notify(
+        assignment.worker.user,
+        "CONTESTACAO_RESOLVIDA",
+        "Contestação decidida",
+        worker_message,
+        link="/meus-trabalhos",
     )
-    return transition(
-        assignment, ASSIGNMENT_MACHINE, S.REFUNDED, actor=actor, reason=reason, now=now
+    notify_company(
+        vacancy.company, "CONTESTACAO_RESOLVIDA", "Contestação decidida", company_message
     )
+    return assignment
 
 
 def free_cancel_message(params):
