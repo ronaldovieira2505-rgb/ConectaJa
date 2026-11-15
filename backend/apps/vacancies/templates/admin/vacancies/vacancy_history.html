@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a> &rsaquo;
+    <a href="{% url 'admin:vacancies_vacancy_changelist' %}">Vagas</a> &rsaquo;
+    <a href="{% url 'admin:vacancies_vacancy_change' vacancy.pk %}">{{ vacancy.title }}</a> &rsaquo;
+    Histórico
+  </div>
+{% endblock %}
+{% block content %}
+  <h2>Resumo financeiro</h2>
+  <table id="financial-summary">
+    <tr><th>Retido</th><td>{{ summary.retained_display }}</td></tr>
+    <tr><th>Repassado</th><td>{{ summary.paid_out_display }}</td></tr>
+    <tr><th>Taxas</th><td>{{ summary.fees_display }}</td></tr>
+    <tr><th>Estornado</th><td>{{ summary.refunded_display }}</td></tr>
+    <tr>
+      <th>RETENÇÃO = REPASSES + TAXAS + ESTORNOS</th>
+      <td id="invariant">{% if summary.balanced %}Fecha{% else %}Não fecha{% endif %}</td>
+    </tr>
+  </table>
+
+  <h2 style="margin-top:24px">Linha do tempo</h2>
+  <table id="history-timeline">
+    <thead>
+      <tr><th>Data e hora</th><th>Tipo</th><th>Evento</th><th>Ator</th><th>Anterior → novo</th><th>Motivo</th><th>Detalhe</th></tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+        <tr>
+          <td>{{ event.at|date:"d/m/Y H:i:s" }}</td>
+          <td>{{ event.category }}</td>
+          <td>{{ event.description }}</td>
+          <td>{{ event.actor }}</td>
+          <td>{{ event.from_state|default:"—" }} → {{ event.to_state|default:"—" }}</td>
+          <td>{{ event.reason|default:"—" }}</td>
+          <td>{{ event.detail|default:"—" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
