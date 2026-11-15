@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.exceptions import DomainError
-from apps.core.models import PlatformParameters
+from apps.core.models import PlatformParameters, StateTransition
 from apps.core.notifications import notify, notify_admins, notify_company
 from apps.core.state_machine import transition
 from apps.payments import services as payments
@@ -256,6 +256,84 @@ def cancel_by_company(assignment, *, reason, actor=None, now=None):
     ASSIGNMENT_MACHINE.validate(assignment.status, S.CANCELLED_BY_COMPANY)
     ensure_free_cancel_window(assignment.vacancy, now=now)
     return cancel_confirmed_by_company(assignment, reason=reason, actor=actor, now=now)
+
+
+def is_late_worker_cancel(vacancy, *, now, params=None):
+    """Cancelamento tardio: falta menos que `free_cancel_minutes_before` para o início."""
+    params = params or PlatformParameters.get()
+    return vacancy.starts_at - now < timedelta(minutes=params.free_cancel_minutes_before)
+
+
+def late_cancel_warning(params):
+    days = params.late_cancel_block_days
+    unit = "dia" if days == 1 else "dias"
+    return f"Cancelando agora você fica {days} {unit} sem poder se candidatar."
+
+
+@transaction.atomic
+def cancel_by_worker(assignment, *, actor=None, now=None):
+    """Prestador cancela a própria alocação confirmada (US72).
+
+    Com antecedência: sem penalidade. Tardio: bloqueio por `late_cancel_block_days`
+    (`suspended_until`). Em ambos libera a posição; se a candidatura já estava encerrada,
+    reabre a vaga (selo "Urgente"). Não conta como falta.
+    """
+    now = now or timezone.now()
+    ASSIGNMENT_MACHINE.validate(assignment.status, S.CANCELLED_BY_WORKER)
+    params = PlatformParameters.get()
+    vacancy = assignment.vacancy
+    late = is_late_worker_cancel(vacancy, now=now, params=params)
+    assignment = transition(
+        assignment,
+        ASSIGNMENT_MACHINE,
+        S.CANCELLED_BY_WORKER,
+        actor=actor,
+        reason="Cancelamento tardio" if late else "Cancelamento com antecedência",
+        now=now,
+    )
+    close_at = vacancy.starts_at - timedelta(minutes=params.applications_close_minutes_before)
+    if now >= close_at and now < vacancy.ends_at and not vacancy.reopened:
+        vacancy.reopened = True
+        vacancy.save(update_fields=["reopened"])
+    worker = assignment.worker
+    if late:
+        block_until = now + timedelta(days=params.late_cancel_block_days)
+        if worker.suspended_until is None or worker.suspended_until < block_until:
+            worker.suspended_until = block_until
+            worker.save(update_fields=["suspended_until"])
+        StateTransition.objects.create(
+            entity_type="WorkerSuspension",
+            entity_id=worker.pk,
+            from_state="ATIVO",
+            to_state="SUSPENSO",
+            actor=actor,
+            reason="Cancelamento tardio",
+            created_at=now,
+        )
+        notify(
+            worker.user,
+            "CANCELAMENTO_TARDIO",
+            "Cancelamento tardio",
+            f"Você cancelou “{vacancy.title}” em cima da hora e não poderá se candidatar "
+            f"por {params.late_cancel_block_days} dias.",
+            link="/meus-trabalhos",
+        )
+    else:
+        notify(
+            worker.user,
+            "TURNO_CANCELADO",
+            "Participação cancelada",
+            f"Você cancelou a sua participação em “{vacancy.title}” sem penalidade.",
+            link="/meus-trabalhos",
+        )
+    notify_company(
+        vacancy.company,
+        "CANCELAMENTO_PRESTADOR",
+        "Prestador cancelou",
+        f"Um prestador cancelou a participação em “{vacancy.title}”. "
+        "A posição foi liberada para novas candidaturas.",
+    )
+    return assignment
 
 
 @transaction.atomic

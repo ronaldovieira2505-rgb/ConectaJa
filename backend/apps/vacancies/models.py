@@ -86,7 +86,9 @@ class Vacancy(models.Model):
     def accepts_applications(self, now):
         if self.status == self.Status.PUBLISHED:
             close_minutes = PlatformParameters.get().applications_close_minutes_before
-            return now < self.starts_at - timedelta(minutes=close_minutes)
+            if now < self.starts_at - timedelta(minutes=close_minutes):
+                return True
+            return self.reopened and now < self.ends_at
         return (
             self.reopened
             and now < self.ends_at

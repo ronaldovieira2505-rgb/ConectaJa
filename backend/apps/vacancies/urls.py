@@ -44,6 +44,11 @@ urlpatterns = [
         name="assignment-check-out",
     ),
     path(
+        "assignments/<int:pk>/cancel-by-worker/",
+        worker_views.AssignmentCancelByWorkerView.as_view(),
+        name="assignment-cancel-by-worker",
+    ),
+    path(
         "assignments/<int:pk>/approve/",
         validation_views.AssignmentApproveView.as_view(),
         name="assignment-approve",

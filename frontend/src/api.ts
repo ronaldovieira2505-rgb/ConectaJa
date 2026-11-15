@@ -214,6 +214,10 @@ export interface JobItem {
   // Só nas alocações (US50/US54).
   can_check_in?: boolean
   can_check_out?: boolean
+  // Cancelamento pelo prestador (US72).
+  can_cancel?: boolean
+  cancel_is_late?: boolean
+  cancel_warning?: string
   check_in_opens_at?: string
   check_in_closes_at?: string
   check_in_at?: string | null
