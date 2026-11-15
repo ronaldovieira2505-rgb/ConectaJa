@@ -12,6 +12,7 @@ from django.utils.html import format_html
 from apps.core.exceptions import DomainError
 from apps.core.models import StateTransition
 from apps.vacancies import assignment_services as assignments
+from apps.vacancies import history
 from apps.vacancies.models import Application, Assignment, Vacancy, VacancyChange
 from integrations.payments import PaymentGatewayError
 
@@ -42,6 +43,31 @@ class VacancyAdmin(admin.ModelAdmin):
     list_filter = ("status", "category")
     search_fields = ("title",)
     readonly_fields = ("status", "reopened")
+
+    def get_urls(self):
+        custom = [
+            path(
+                "<int:pk>/historico/",
+                self.admin_site.admin_view(self.history_view),
+                name="vacancies_vacancy_full_history",
+            )
+        ]
+        return custom + super().get_urls()
+
+    def history_view(self, request, pk):
+        if not request.user.has_perm("vacancies.view_vacancy"):
+            raise PermissionDenied
+        vacancy = Vacancy.objects.select_related("company").filter(pk=pk).first()
+        if vacancy is None:
+            raise Http404
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Histórico completo — {vacancy.title}",
+            "vacancy": vacancy,
+            "events": history.build_history(vacancy),
+            "summary": history.financial_summary(vacancy),
+        }
+        return TemplateResponse(request, "admin/vacancies/vacancy_history.html", context)
 
 
 @admin.register(Application)
