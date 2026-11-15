@@ -184,7 +184,37 @@ export interface VacancyCard {
   distance_km: number | null
 }
 
+/** Regras da plataforma vindas de `PlatformParameters` (US16): minutos, metros, dias e contagens. */
+export interface VacancyRules {
+  free_cancel_minutes_before: number
+  late_cancel_block_days: number
+  geofence_radius_m: number
+  checkin_open_minutes_before: number
+  no_show_tolerance_minutes: number
+  no_show_limit: number
+  no_show_window_days: number
+  suspension_days: number
+  contest_window_minutes: number
+}
+
+/** Prazo amigável a partir de minutos: "30 min", "24 h", "2 dias", "1 h 30 min". */
+export function formatMinutes(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440
+    return days === 1 ? '24 h' : `${days} dias`
+  }
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`
+}
+
+export function formatDays(days: number): string {
+  return days === 1 ? '1 dia' : `${days} dias`
+}
+
 export interface VacancyPublicDetail extends VacancyCard {
+  rules: VacancyRules
   description: string
   street: string
   number: string

@@ -142,6 +142,35 @@ def test_detail_has_full_description_address_and_values():
     assert (data["gross_cents"], data["fee_cents"], data["net_cents"]) == (10000, 300, 9700)
 
 
+def test_detail_has_platform_rules_with_default_values():
+    vacancy = published()
+    rules = APIClient().get(f"{URL}{vacancy.pk}/").json()["rules"]
+    assert rules == {
+        "free_cancel_minutes_before": 1440,
+        "late_cancel_block_days": 7,
+        "geofence_radius_m": 150,
+        "checkin_open_minutes_before": 30,
+        "no_show_tolerance_minutes": 30,
+        "no_show_limit": 2,
+        "no_show_window_days": 30,
+        "suspension_days": 15,
+        "contest_window_minutes": 1440,
+    }
+
+
+def test_detail_rules_follow_platform_parameters():
+    from apps.core.models import PlatformParameters
+
+    params = PlatformParameters.get()
+    params.free_cancel_minutes_before = 720
+    params.geofence_radius_m = 200
+    params.save()
+    vacancy = published()
+    rules = APIClient().get(f"{URL}{vacancy.pk}/").json()["rules"]
+    assert rules["free_cancel_minutes_before"] == 720
+    assert rules["geofence_radius_m"] == 200
+
+
 def test_detail_of_unpublished_vacancy_is_404():
     vacancy = published()
     vacancy_services.remove_vacancy(vacancy)
