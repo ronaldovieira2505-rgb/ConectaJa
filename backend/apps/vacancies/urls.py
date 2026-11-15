@@ -59,6 +59,11 @@ urlpatterns = [
         name="assignment-contest",
     ),
     path(
+        "assignments/<int:pk>/review/",
+        validation_views.AssignmentReviewView.as_view(),
+        name="assignment-review",
+    ),
+    path(
         "assignments/<int:pk>/cancel-by-company/",
         validation_views.AssignmentCancelByCompanyView.as_view(),
         name="assignment-cancel-by-company",

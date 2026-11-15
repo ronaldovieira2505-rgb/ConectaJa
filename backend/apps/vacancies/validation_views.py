@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies import assignment_services as assignments
+from apps.vacancies import review_services as reviews
 from apps.vacancies.models import Assignment
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from integrations.payments import PaymentGatewayError
@@ -197,3 +198,48 @@ class AssignmentCancelByCompanyView(CompanyAreaView):
                 "status_label": assignment.get_status_display(),
             }
         )
+
+
+def serialize_review(review):
+    return {
+        "id": review.pk,
+        "assignment_id": review.assignment_id,
+        "rating": review.rating,
+        "comment": review.comment,
+        "created_at": review.created_at.isoformat(),
+    }
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AssignmentReviewView(CompanyAreaView):
+    """`POST /api/assignments/<id>/review/` com `{"rating": 1-5, "comment": "..."}` (US63).
+
+    Só a empresa dona da vaga (outra responde 404). Nota fora de 1 a 5 ou comentário acima de
+    500 caracteres: 400. Fora de `APROVADA`/`PAGA`, já avaliada ou com o prazo
+    (`review_window_days`) encerrado: 409. A avaliação é definitiva.
+    """
+
+    def post(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company)
+        if denied:
+            return denied
+        assignment = (
+            Assignment.objects.select_related("vacancy__company", "worker__user")
+            .filter(pk=pk, vacancy__company=company)
+            .first()
+        )
+        if assignment is None:
+            return Response({"detail": NOT_FOUND}, status=404)
+        try:
+            rating = reviews.validate_rating(request.data.get("rating"))
+            comment = reviews.validate_comment(request.data.get("comment"))
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=400)
+        try:
+            review = reviews.review_worker(
+                assignment, author=request.user, rating=rating, comment=comment
+            )
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=409)
+        return Response(serialize_review(review), status=201)

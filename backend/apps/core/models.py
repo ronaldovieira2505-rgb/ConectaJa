@@ -45,6 +45,9 @@ class PlatformParameters(models.Model):
     document_max_size_mb = models.PositiveIntegerField(
         "tamanho máximo de cada documento/selfie (MB)", default=5
     )
+    review_window_days = models.PositiveIntegerField(
+        "prazo para avaliar após a aprovação das horas (dias)", default=7
+    )
     worker_fee_percent = models.DecimalField(
         "taxa retida do prestador (%)", max_digits=5, decimal_places=2, default=Decimal("3")
     )

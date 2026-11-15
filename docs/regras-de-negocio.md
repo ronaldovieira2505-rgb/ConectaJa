@@ -29,9 +29,10 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `suspension_days` | 15 | Duração da suspensão automática |
 | `free_cancel_minutes_before` | 1440 (24 h) | Prazo mínimo (X min antes do início) para a empresa cancelar pelo app (US71); também é o limite sem penalidade do prestador [pós-MVP: US72] |
 | `late_cancel_block_days` | 7 | Bloqueio por cancelamento tardio [pós-MVP] |
+| `review_window_days` | 7 | Prazo, em dias após a aprovação das horas, para a empresa avaliar o prestador (US63); deve ser maior que zero |
 | `worker_fee_percent` | 3 | Taxa retida do prestador |
 
-**Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
+**Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
 
 ## 3. Cadastro e triagem
 
@@ -66,6 +67,8 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 - **Validação:** a empresa confere entrada e saída e aprova. Se não se manifestar em 24 h, a aprovação é automática.
 - **Contestação [extra]:** a empresa contesta com motivo; a equipe administrativa contata as partes e decide.
 - **Liberação:** prestador recebe 97% e a plataforma retém 3% (lançamentos no livro-razão).
+
+**Avaliação do prestador (US63, decisões do PO):** com a alocação `APROVADA` ou `PAGA`, a empresa dona da vaga envia nota de 1 a 5 e comentário opcional de até 500 caracteres (`POST /api/assignments/<id>/review/`). A avaliação fica ligada à alocação, é **definitiva** (sem nova avaliação nem edição) e o prestador é notificado, vendo a nota assim que ela é enviada. O prazo é `review_window_days` (padrão 7 dias) contados da aprovação das horas (`validated_at`); depois disso a API recusa. Alocações em `FALTA`, `CANCELADA_*` ou `ESTORNADA` não são avaliáveis. Avaliar é opcional e nunca bloqueia pagamento nem o fluxo. Média e exibição para outras empresas (US40), níveis e selos (US65/US66) e moderação de comentários ficam fora.
 
 ## 7. Hora extra: decisão
 
