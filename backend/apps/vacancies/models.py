@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
@@ -220,3 +220,43 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"Alocação #{self.pk}"
+
+
+class Review(models.Model):
+    """Avaliação de uma alocação (US63: empresa → prestador; reutilizável pela US64)."""
+
+    class Direction(models.TextChoices):
+        COMPANY_TO_WORKER = "EMPRESA_PARA_PRESTADOR", "Empresa avalia o prestador"
+        WORKER_TO_COMPANY = "PRESTADOR_PARA_EMPRESA", "Prestador avalia a empresa"
+
+    COMMENT_MAX_LENGTH = 500
+
+    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name="reviews")
+    direction = models.CharField("sentido", max_length=22, choices=Direction.choices)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name="autor",
+    )
+    rating = models.PositiveSmallIntegerField(
+        "nota",
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    comment = models.CharField("comentário", max_length=COMMENT_MAX_LENGTH, blank=True)
+    created_at = models.DateTimeField("criada em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "avaliação"
+        verbose_name_plural = "avaliações"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "direction"], name="unique_review_per_direction"
+            ),
+            models.CheckConstraint(
+                condition=Q(rating__gte=1, rating__lte=5), name="review_rating_1_to_5"
+            ),
+        ]
+
+    def __str__(self):
+        return f"Avaliação #{self.pk} ({self.rating}★)"

@@ -104,4 +104,4 @@ Todos os prazos, limites e taxas de `docs/regras-de-negocio.md`. Editável pelo 
 `user`, `kind`, `title`, `message`, `link`, `read_at`, `created_at`. Sem e-mail ou push no MVP.
 
 ### Review — avaliação bilateral [pós-MVP: US63/US64]
-Nota de 1 a 5 + comentário opcional; não obrigatória; conta para o status.
+`assignment`, `direction` (`EMPRESA_PARA_PRESTADOR` na US63; `PRESTADOR_PARA_EMPRESA` reservado à US64), `author` (usuário), `rating` (1 a 5), `comment` (opcional, até 500 caracteres), `created_at`. Única por (`assignment`, `direction`). Definitiva: não há edição nem exclusão. Não obrigatória; conta para o status [pós-MVP].

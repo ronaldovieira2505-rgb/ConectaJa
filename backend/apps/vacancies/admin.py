@@ -13,7 +13,7 @@ from apps.core.exceptions import DomainError
 from apps.core.models import StateTransition
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import history
-from apps.vacancies.models import Application, Assignment, Vacancy, VacancyChange
+from apps.vacancies.models import Application, Assignment, Review, Vacancy, VacancyChange
 from integrations.payments import PaymentGatewayError
 
 logger = logging.getLogger(__name__)
@@ -218,3 +218,18 @@ class AssignmentAdmin(admin.ModelAdmin):
             "company_reason": assignments.contest_reason(assignment),
         }
         return TemplateResponse(request, "admin/vacancies/resolve_contest.html", context)
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ("id", "assignment", "direction", "rating", "author", "created_at")
+    list_filter = ("direction", "rating")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
