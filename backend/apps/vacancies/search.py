@@ -41,7 +41,7 @@ def searchable_vacancies(now=None):
         .select_related("company", "custody")
         .annotate(
             filled=Count(
-                "assignments", filter=Q(assignments__status__in=Assignment.ACTIVE_STATUSES)
+                "assignments", filter=Q(assignments__status__in=Assignment.UNAVAILABLE_STATUSES)
             )
         )
     )
@@ -136,7 +136,7 @@ def serialize_card(vacancy, distance_m=None, params=None):
     gross = vacancy.pay_per_person_cents
     filled = getattr(vacancy, "filled", None)
     if filled is None:
-        filled = vacancy.filled_positions
+        filled = vacancy.unavailable_positions
     return {
         "id": vacancy.pk,
         "title": vacancy.title,
@@ -168,7 +168,7 @@ def detail_vacancy(pk):
         .select_related("company", "custody")
         .annotate(
             filled=Count(
-                "assignments", filter=Q(assignments__status__in=Assignment.ACTIVE_STATUSES)
+                "assignments", filter=Q(assignments__status__in=Assignment.UNAVAILABLE_STATUSES)
             )
         )
         .first()
@@ -230,7 +230,7 @@ def apply_blocker(user, now=None, vacancy=None):
         return "Você já se candidatou a esta vaga."
     if not vacancy.accepts_applications(now):
         return "As candidaturas desta vaga estão encerradas."
-    if vacancy.filled_positions >= vacancy.positions:
+    if vacancy.unavailable_positions >= vacancy.positions:
         return "Esta vaga está lotada."
     if has_overlap(worker, vacancy):
         return "Você já tem um turno nesse horário."

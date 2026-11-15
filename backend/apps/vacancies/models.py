@@ -75,6 +75,11 @@ class Vacancy(models.Model):
         return self.assignments.filter(status__in=Assignment.ACTIVE_STATUSES).count()
 
     @property
+    def unavailable_positions(self):
+        """Posições ocupadas ou canceladas pela empresa (não voltam a ser ofertadas)."""
+        return self.assignments.filter(status__in=Assignment.UNAVAILABLE_STATUSES).count()
+
+    @property
     def worker_net_cents(self):
         return PlatformParameters.get().worker_net_cents(self.pay_per_person_cents)
 
@@ -175,6 +180,10 @@ class Assignment(models.Model):
         Status.APPROVED,
         Status.PAID,
     )
+
+    # Posições indisponíveis: as ativas e as que a empresa cancelou (desistiu da posição,
+    # então ela não volta para a busca nem para novas aprovações).
+    UNAVAILABLE_STATUSES = (*ACTIVE_STATUSES, Status.CANCELLED_BY_COMPANY)
 
     vacancy = models.ForeignKey(Vacancy, on_delete=models.CASCADE, related_name="assignments")
     worker = models.ForeignKey(

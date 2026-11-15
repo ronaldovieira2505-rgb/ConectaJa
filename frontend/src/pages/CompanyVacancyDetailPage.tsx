@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, ApiError, brl, formatShift, type Vacancy } from '../api'
 import { CATEGORIES } from '../categories'
+import CancelReasonForm from '../components/CancelReasonForm'
 import { Alert, Badge, Button, Card, Field, Loading, SelectField, Slots } from '../components/ui'
 import { badgeToneFor, toneFor } from '../status'
 import PendingAssignmentsSection from './PendingAssignments'
@@ -29,6 +30,8 @@ export default function CompanyVacancyDetailPage() {
   const [editing, setEditing] = useState(false)
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   const [removed, setRemoved] = useState(false)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [cancelled, setCancelled] = useState(false)
   const [form, setForm] = useState({
     title: '',
     category: '',
@@ -123,6 +126,19 @@ export default function CompanyVacancyDetailPage() {
     }
   }
 
+  async function cancelWhole(reason: string) {
+    setError('')
+    try {
+      setVacancy(
+        await api<Vacancy>(`/api/vacancies/${id}/cancel/`, { method: 'POST', body: { reason } }),
+      )
+      setCancelled(true)
+      setConfirmingCancel(false)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível cancelar a vaga.')
+    }
+  }
+
   if (!vacancy && !error) return <Loading rows={1} />
 
   return (
@@ -131,6 +147,11 @@ export default function CompanyVacancyDetailPage() {
       {paid && <Alert tone="success">Pagamento confirmado. A vaga foi publicada.</Alert>}
       {saved && <Alert tone="success">Alterações salvas.</Alert>}
       {removed && <Alert tone="success">Anúncio removido. O valor foi estornado.</Alert>}
+      {cancelled && (
+        <Alert tone="success">
+          Vaga cancelada. O valor foi estornado e os prestadores foram avisados.
+        </Alert>
+      )}
       {vacancy && editing && (
         <form onSubmit={save} noValidate>
           <h1>Editar vaga</h1>
@@ -216,6 +237,27 @@ export default function CompanyVacancyDetailPage() {
               </div>
             </>
           )}
+          {['PUBLICADA', 'CANDIDATURAS_ENCERRADAS'].includes(vacancy.status) &&
+            vacancy.filled_positions > 0 &&
+            (!confirmingCancel ? (
+              <div className="acoes">
+                <Button variant="secondary" onClick={() => setConfirmingCancel(true)}>
+                  Cancelar vaga inteira
+                </Button>
+              </div>
+            ) : (
+              <Alert tone="info">
+                <p>
+                  Cancelar a vaga inteira cancela todos os turnos confirmados, expira as candidaturas
+                  pendentes, estorna o valor integral e avisa todos os prestadores.
+                </p>
+                <CancelReasonForm
+                  confirmLabel="Confirmar cancelamento da vaga"
+                  onConfirm={cancelWhole}
+                  onBack={() => setConfirmingCancel(false)}
+                />
+              </Alert>
+            ))}
           {vacancy.status === 'PUBLICADA' && (
             <>
               {!confirmingRemove ? (

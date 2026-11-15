@@ -116,3 +116,46 @@ class AssignmentApproveView(CompanyAreaView):
                 "payment_pending": payment_pending,
             }
         )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AssignmentCancelByCompanyView(CompanyAreaView):
+    """`POST /api/assignments/<id>/cancel-by-company/` com `{"reason": "..."}` (US71).
+
+    Só a empresa dona da vaga; outra empresa responde 404. Dentro do prazo gratuito de
+    cancelamento a empresa não cancela pelo app (409, "Fale com o suporte").
+    """
+
+    def post(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company)
+        if denied:
+            return denied
+        assignment = (
+            Assignment.objects.select_related(
+                "vacancy__company", "vacancy__custody", "worker__user"
+            )
+            .filter(pk=pk, vacancy__company=company)
+            .first()
+        )
+        if assignment is None:
+            return Response({"detail": NOT_FOUND}, status=404)
+        reason = request.data.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+        try:
+            assignment = assignments.cancel_by_company(
+                assignment, reason=reason, actor=request.user
+            )
+        except PaymentGatewayError as error:
+            return Response({"detail": str(error)}, status=502)
+        except DomainError as error:  # inclui InvalidTransition
+            status = 400 if not reason.strip() else 409
+            return Response({"detail": str(error)}, status=status)
+        return Response(
+            {
+                "id": assignment.pk,
+                "status": assignment.status,
+                "status_label": assignment.get_status_display(),
+            }
+        )

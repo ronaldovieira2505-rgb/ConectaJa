@@ -152,6 +152,7 @@ export interface VacancyCandidates {
   positions: number
   filled_positions: number
   team_complete: boolean
+  free_cancel_minutes_before?: number
   candidates: Candidate[]
   team: TeamMember[]
 }

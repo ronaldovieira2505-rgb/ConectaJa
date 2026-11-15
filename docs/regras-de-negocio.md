@@ -27,7 +27,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `contest_window_minutes` | 1440 (24 h) | Janela para a empresa aprovar ou contestar; silêncio = aprovação |
 | `no_show_limit` / `no_show_window_days` | 2 / 30 | Faltas que geram suspensão automática, e a janela considerada |
 | `suspension_days` | 15 | Duração da suspensão automática |
-| `free_cancel_minutes_before` | 1440 (24 h) | Cancelamento sem penalidade até X min antes [pós-MVP] |
+| `free_cancel_minutes_before` | 1440 (24 h) | Prazo mínimo (X min antes do início) para a empresa cancelar pelo app (US71); também é o limite sem penalidade do prestador [pós-MVP: US72] |
 | `late_cancel_block_days` | 7 | Bloqueio por cancelamento tardio [pós-MVP] |
 | `worker_fee_percent` | 3 | Taxa retida do prestador |
 
@@ -50,6 +50,8 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 - **Editar ou remover** só enquanto nenhuma candidatura tiver sido aprovada. A remoção gera estorno total e expira as candidaturas pendentes, avisando os candidatos. Só vagas `PUBLICADA` podem ser editadas ou removidas (não em `CANDIDATURAS_ENCERRADAS`).
 - **Campos editáveis:** título, descrição, categoria, endereço/ponto e início/fim (a antecedência mínima `min_publish_lead_minutes` vale também na edição). Cada alteração é auditada (`VacancyChange`: usuário, data, campo, valor anterior e novo).
 - **Valor por pessoa e número de pessoas não são editáveis após o pagamento** (decisão do PO). Para alterar, a empresa remove o anúncio (estorno total) e publica um novo. Não há pagamento complementar nem estorno parcial; a custódia não muda.
+
+- **Cancelamento pela empresa (US71):** com prestador aprovado, a empresa cancela **um prestador** (`CONFIRMADA → CANCELADA_EMPRESA`) ou a **vaga inteira** (`PUBLICADA`/`CANDIDATURAS_ENCERRADAS → CANCELADA`) pelo app **somente até `free_cancel_minutes_before` (padrão 1440 min = 24 h) antes do início**. Dentro desse prazo a empresa não cancela pelo app e vê "Cancelamentos só podem ser feitos até 24 h antes do início. Fale com o suporte." (decisão do PO, para proteger o prestador que já reservou o dia). O **motivo é obrigatório** e fica registrado na transição. O valor da posição é estornado à empresa (`ESTORNO_CONTRATANTE`), sem multa; o prestador é notificado. No cancelamento da vaga inteira, todas as alocações viram `CANCELADA_EMPRESA`, as candidaturas pendentes expiram, a custódia é encerrada com estorno total e candidatos e prestadores são avisados. A posição liberada por cancelamento da empresa **não volta para a busca** nem aceita novas aprovações. Vaga sem aprovados continua usando "Remover anúncio" (US24). Cancelamento pelo admin está fora do escopo.
 
 ## 5. Candidatura e seleção
 

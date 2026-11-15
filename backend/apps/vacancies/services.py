@@ -11,6 +11,7 @@ from apps.core.models import PlatformParameters
 from apps.core.notifications import notify, notify_company
 from apps.core.state_machine import record_creation, transition
 from apps.payments import services as payments
+from apps.vacancies import assignment_services as assignments
 from apps.vacancies.models import Application, Assignment, Vacancy, VacancyChange
 from apps.vacancies.state_machine import (
     APPLICATION_MACHINE,
@@ -186,6 +187,37 @@ def remove_vacancy(vacancy, *, actor=None, now=None):
             f"A vaga “{vacancy.title}” foi removida pela empresa e sua candidatura expirou.",
             link="/meus-trabalhos",
         )
+    return vacancy
+
+
+@transaction.atomic
+def cancel_vacancy_by_company(vacancy, *, reason, actor=None, now=None):
+    """PUBLICADA/CANDIDATURAS_ENCERRADAS com aprovados → CANCELADA, com estorno total (US71).
+
+    Todas as alocações viram CANCELADA_EMPRESA, as candidaturas pendentes expiram e a
+    custódia é encerrada. Sem aprovados, vale a remoção do anúncio (US24).
+    """
+    now = now or timezone.now()
+    reason = assignments.clean_cancel_reason(reason)
+    vacancy = Vacancy.objects.select_for_update().get(pk=vacancy.pk)
+    VACANCY_MACHINE.validate(vacancy.status, V.CANCELLED)
+    if vacancy.status not in (V.PUBLISHED, V.APPLICATIONS_CLOSED):
+        raise DomainError("Só é possível cancelar uma vaga publicada.")
+    active = list(
+        vacancy.assignments.filter(status__in=Assignment.ACTIVE_STATUSES).select_related(
+            "worker__user", "vacancy__custody"
+        )
+    )
+    if not active:
+        raise DomainError("Esta vaga não tem prestador aprovado. Use “Remover anúncio”.")
+    assignments.ensure_free_cancel_window(vacancy, now=now)
+    if any(a.status != Assignment.Status.CONFIRMED for a in active):
+        raise DomainError("Há turno já iniciado nesta vaga. Fale com o suporte.")
+    for assignment in active:
+        assignments.cancel_confirmed_by_company(assignment, reason=reason, actor=actor, now=now)
+    vacancy = transition(vacancy, VACANCY_MACHINE, V.CANCELLED, actor=actor, reason=reason, now=now)
+    expire_pending_applications(vacancy, reason=reason, now=now)
+    payments.close(vacancy.custody, actor=actor, reason=reason, now=now)
     return vacancy
 
 

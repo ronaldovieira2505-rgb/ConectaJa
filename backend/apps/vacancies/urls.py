@@ -49,6 +49,12 @@ urlpatterns = [
         name="assignment-approve",
     ),
     path(
+        "assignments/<int:pk>/cancel-by-company/",
+        validation_views.AssignmentCancelByCompanyView.as_view(),
+        name="assignment-cancel-by-company",
+    ),
+    path("vacancies/<int:pk>/cancel/", views.VacancyCancelView.as_view(), name="vacancy-cancel"),
+    path(
         "company/assignments/pending/",
         validation_views.CompanyPendingAssignmentsView.as_view(),
         name="company-assignments-pending",

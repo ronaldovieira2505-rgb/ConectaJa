@@ -310,6 +310,30 @@ class VacancyRemoveView(CompanyAreaView):
         return Response(serialize_vacancy(self.vacancies(company).get(pk=pk)))
 
 
+@method_decorator(csrf_protect, name="dispatch")
+class VacancyCancelView(CompanyAreaView):
+    """`POST /api/vacancies/<id>/cancel/` com `{"reason": "..."}`: cancela a vaga inteira (US71)."""
+
+    def post(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company)
+        if denied:
+            return denied
+        vacancy = self.vacancies(company).filter(pk=pk).first()
+        if vacancy is None:
+            return Response({"detail": "Vaga não encontrada."}, status=404)
+        reason = request.data.get("reason", "")
+        if not isinstance(reason, str) or not reason.strip():
+            return Response({"detail": "Informe o motivo do cancelamento."}, status=400)
+        try:
+            services.cancel_vacancy_by_company(vacancy, reason=reason, actor=request.user)
+        except PaymentGatewayError as error:
+            return Response({"detail": str(error)}, status=502)
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=409)
+        return Response(serialize_vacancy(self.vacancies(company).get(pk=pk)))
+
+
 class CompanyVacancyListView(CompanyAreaView):
     def get(self, request):
         company = self.company(request)

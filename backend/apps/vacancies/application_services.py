@@ -29,7 +29,7 @@ def apply_to_vacancy(vacancy, worker, *, actor=None, now=None):
     vacancy = Vacancy.objects.select_for_update().get(pk=vacancy.pk)
     if not vacancy.accepts_applications(now):
         raise DomainError("As candidaturas desta vaga estão encerradas.")
-    if vacancy.filled_positions >= vacancy.positions:
+    if vacancy.unavailable_positions >= vacancy.positions:
         raise DomainError("Esta vaga está lotada.")
     if worker.verification_status != Worker.VerificationStatus.APPROVED:
         raise DomainError("Só prestadores aprovados podem se candidatar.")
@@ -53,7 +53,7 @@ def approve_application(application, *, actor=None, now=None):
     APPLICATION_MACHINE.validate(application.status, A.APPROVED)
     vacancy = Vacancy.objects.select_for_update().get(pk=application.vacancy_id)
     worker = application.worker
-    if vacancy.filled_positions >= vacancy.positions:
+    if vacancy.unavailable_positions >= vacancy.positions:
         raise DomainError("Não há posição livre nesta vaga.")
     open_window = now < vacancy.starts_at or (vacancy.reopened and now < vacancy.ends_at)
     if not open_window:

@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_protect
 from rest_framework.response import Response
 
 from apps.core.exceptions import DomainError, InvalidTransition
+from apps.core.models import PlatformParameters
 from apps.vacancies import application_services as applications
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
@@ -98,7 +99,8 @@ class VacancyCandidatesView(CandidateAreaView):
             {
                 "positions": vacancy.positions,
                 "filled_positions": filled,
-                "team_complete": filled >= vacancy.positions,
+                "team_complete": vacancy.unavailable_positions >= vacancy.positions,
+                "free_cancel_minutes_before": PlatformParameters.get().free_cancel_minutes_before,
                 "candidates": [serialize_candidate(a) for a in pending],
                 "team": [serialize_team_member(a) for a in team],
             }
