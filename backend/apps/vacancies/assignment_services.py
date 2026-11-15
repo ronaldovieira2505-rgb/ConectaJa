@@ -203,6 +203,61 @@ def resolve_contest(assignment, *, in_favor_of_worker, reason, actor, now=None):
     )
 
 
+def free_cancel_message(params):
+    minutes = params.free_cancel_minutes_before
+    window = f"{minutes // 60} h" if minutes % 60 == 0 else f"{minutes} min"
+    return f"Cancelamentos só podem ser feitos até {window} antes do início. Fale com o suporte."
+
+
+def ensure_free_cancel_window(vacancy, *, now):
+    """Dentro do prazo (`free_cancel_minutes_before`) a empresa não cancela pelo app."""
+    params = PlatformParameters.get()
+    if vacancy.starts_at - now < timedelta(minutes=params.free_cancel_minutes_before):
+        raise DomainError(free_cancel_message(params))
+
+
+def clean_cancel_reason(reason):
+    reason = (reason or "").strip()
+    if not reason:
+        raise DomainError("Informe o motivo do cancelamento.")
+    return reason
+
+
+@transaction.atomic
+def cancel_confirmed_by_company(assignment, *, reason, actor=None, now=None):
+    """CONFIRMADA → CANCELADA_EMPRESA: estorna a posição e avisa o prestador.
+
+    Sem checar o prazo nem o motivo; quem chama (cancelamento da alocação ou da vaga
+    inteira) valida antes.
+    """
+    ASSIGNMENT_MACHINE.validate(assignment.status, S.CANCELLED_BY_COMPANY)
+    payments.refund_assignment(
+        assignment.vacancy.custody, assignment, actor=actor, reason=reason, now=now
+    )
+    assignment = transition(
+        assignment, ASSIGNMENT_MACHINE, S.CANCELLED_BY_COMPANY, actor=actor, reason=reason, now=now
+    )
+    notify(
+        assignment.worker.user,
+        "TURNO_CANCELADO",
+        "Turno cancelado pela empresa",
+        f"A empresa cancelou o seu turno em “{assignment.vacancy.title}”. "
+        f"Motivo: {reason}",
+        link="/meus-trabalhos",
+    )
+    return assignment
+
+
+@transaction.atomic
+def cancel_by_company(assignment, *, reason, actor=None, now=None):
+    """Empresa cancela uma alocação confirmada com antecedência (US71)."""
+    now = now or timezone.now()
+    reason = clean_cancel_reason(reason)
+    ASSIGNMENT_MACHINE.validate(assignment.status, S.CANCELLED_BY_COMPANY)
+    ensure_free_cancel_window(assignment.vacancy, now=now)
+    return cancel_confirmed_by_company(assignment, reason=reason, actor=actor, now=now)
+
+
 @transaction.atomic
 def settle(assignment, *, now=None):
     """APROVADA → PAGA. Se o PSP falhar, a exceção desfaz tudo e segue APROVADA."""

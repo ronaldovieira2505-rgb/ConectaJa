@@ -22,6 +22,7 @@
 | `AGUARDANDO_PAGAMENTO` | Empresa desiste | `CANCELADA` | Custódia → `CANCELADA` (nada foi cobrado) |
 | `AGUARDANDO_PAGAMENTO` | SISTEMA: *prazo para pagar (1440 min)* expirou ou a antecedência mínima deixou de ser possível | `CANCELADA` | Idem |
 | `PUBLICADA` | Empresa remove a vaga (US24) | `CANCELADA` | Só se **nenhuma** candidatura foi aprovada. Estorno total (`ESTORNO_CONTRATANTE`); candidaturas pendentes → `EXPIRADA` |
+| `PUBLICADA` ou `CANDIDATURAS_ENCERRADAS` | Empresa cancela a vaga inteira (US71) | `CANCELADA` | Só **com** alocação confirmada, faltando ≥ *1440 min (24 h)* para `starts_at`; motivo obrigatório. Todas as alocações → `CANCELADA_EMPRESA`; candidaturas pendentes → `EXPIRADA`; custódia → `ENCERRADA` com estorno total; prestadores e candidatos notificados |
 | `PUBLICADA` | SISTEMA: agora ≥ `starts_at` − *encerramento de candidaturas (120 min)* | `CANDIDATURAS_ENCERRADAS` | Novas candidaturas bloqueadas; a empresa ainda pode aprovar as pendentes até `starts_at` |
 | `CANDIDATURAS_ENCERRADAS` | SISTEMA: agora ≥ `starts_at` e há ≥ 1 alocação `CONFIRMADA` | `EM_ANDAMENTO` | — |
 | `CANDIDATURAS_ENCERRADAS` | SISTEMA: agora ≥ `starts_at` e nenhuma alocação | `CANCELADA` | Estorno total; empresa notificada ("ninguém foi aprovado") |
@@ -55,7 +56,7 @@ Estados finais: `APROVADA` (o acompanhamento continua na alocação), `RECUSADA`
 | `CONFIRMADA` | Prestador faz check-in (US50) | `EM_EXECUCAO` | Agora entre `starts_at` − *antecedência do check-in (30 min)* e `starts_at` + *tolerância de falta (30 min)*; distância até a vaga ≤ *raio (150 m)* (fórmula de Haversine). Guarda horário, coordenadas e distância |
 | `CONFIRMADA` | SISTEMA: agora > `starts_at` + *tolerância de falta (30 min)* sem check-in | `FALTA` | Libera a posição, reabre a vaga, notifica a empresa (US55), conta para a suspensão automática |
 | `CONFIRMADA` | Prestador cancela [pós-MVP: US72] | `CANCELADA_PRESTADOR` | ≥ *1440 min (24 h)* antes: sem penalidade. Menos que isso: bloqueio de *7 dias* + rebaixamento de status. Libera a posição |
-| `CONFIRMADA` | Empresa cancela [pós-MVP: US71] | `CANCELADA_EMPRESA` | Estorno da posição |
+| `CONFIRMADA` | Empresa cancela (US71) | `CANCELADA_EMPRESA` | Só se faltar ≥ *1440 min (24 h)* para `starts_at` (`free_cancel_minutes_before`); motivo obrigatório. Estorno da posição (`ESTORNO_CONTRATANTE`); notifica o prestador. A posição **não** volta para a busca |
 | `EM_EXECUCAO` | Prestador faz check-out (US54) | `AGUARDANDO_VALIDACAO` | Guarda o horário de saída |
 | `EM_EXECUCAO` | SISTEMA: agora > `ends_at` + *check-out automático (120 min)* | `AGUARDANDO_VALIDACAO` | `check_out_at = ends_at`, `check_out_auto = true` |
 | `AGUARDANDO_VALIDACAO` | Empresa aprova as horas (US56) | `APROVADA` | — |
