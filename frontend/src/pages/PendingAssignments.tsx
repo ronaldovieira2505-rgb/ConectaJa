@@ -8,6 +8,7 @@ import {
   formatTime,
   type PendingAssignment,
 } from '../api'
+import CancelReasonForm from '../components/CancelReasonForm'
 import { Alert, Badge, Button } from '../components/ui'
 
 /** Horas a conferir: previsto × registrado e aprovação com liberação do pagamento (US56/US59). */
@@ -21,6 +22,7 @@ export default function PendingAssignmentsSection({
   const [items, setItems] = useState<PendingAssignment[] | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [contestingId, setContestingId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const query = vacancyId !== undefined ? `?vacancy=${vacancyId}` : ''
@@ -55,6 +57,21 @@ export default function PendingAssignmentsSection({
       onChange?.()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível aprovar as horas.')
+      await load()
+    }
+  }
+
+  async function contest(id: number, reason: string) {
+    setError('')
+    setNotice('')
+    try {
+      await api(`/api/assignments/${id}/contest/`, { method: 'POST', body: { reason } })
+      setContestingId(null)
+      setNotice('Horas contestadas. A equipe vai analisar e avisar as partes.')
+      await load()
+      onChange?.()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível contestar as horas.')
       await load()
     }
   }
@@ -102,9 +119,24 @@ export default function PendingAssignmentsSection({
                 ? `Aprovação automática em ${formatRemaining(a.auto_approve_in_seconds)}`
                 : 'Aprovação automática no próximo processamento'}
             </p>
-            <div className="acoes">
-              <Button onClick={() => approve(a.id)}>Confirmar presença e liberar pagamento</Button>
-            </div>
+            {contestingId === a.id ? (
+              <CancelReasonForm
+                label="Motivo da contestação"
+                emptyMessage="Informe o motivo da contestação."
+                confirmLabel="Enviar contestação"
+                onConfirm={(reason) => contest(a.id, reason)}
+                onBack={() => setContestingId(null)}
+              />
+            ) : (
+              <div className="acoes">
+                <Button onClick={() => approve(a.id)}>Confirmar presença e liberar pagamento</Button>
+                {a.can_contest && (
+                  <Button variant="secondary" onClick={() => setContestingId(a.id)}>
+                    Contestar
+                  </Button>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>

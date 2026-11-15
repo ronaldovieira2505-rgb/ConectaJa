@@ -151,7 +151,7 @@ export default function MyJobsPage() {
                   <Link to={`/vagas/${item.vacancy_id}`}>{item.title}</Link>
                 </h3>
                 <p className="marcadores">
-                  <Badge tone={badgeTone(item.status)}>{item.status_label}</Badge>
+                  <Badge tone={badgeTone(item.status)}>{item.status === 'CONTESTADA' ? 'Horas contestadas' : item.status_label}</Badge>
                 </p>
                 <dl className="linhas">
                   <div>
@@ -183,6 +183,12 @@ export default function MyJobsPage() {
                       Date.now() < new Date(item.check_in_closes_at).getTime() && (
                         <p>O check-in abre às {formatTime(item.check_in_opens_at)}.</p>
                       )}
+                    {item.status === 'CONTESTADA' && (
+                      <Alert tone="error">
+                        Horas contestadas pela empresa.
+                        {item.contest_reason && <> Motivo: {item.contest_reason}</>}
+                      </Alert>
+                    )}
                     {item.check_in_at && (
                       <p>
                         Check-in feito às {formatTime(item.check_in_at)}

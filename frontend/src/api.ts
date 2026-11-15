@@ -253,6 +253,8 @@ export interface JobItem {
   check_in_at?: string | null
   check_out_at?: string | null
   check_out_auto?: boolean
+  // Motivo informado pela empresa quando as horas foram contestadas (US57).
+  contest_reason?: string
 }
 
 export type JobGroupKey = 'waiting' | 'upcoming' | 'in_progress' | 'completed' | 'closed'
@@ -302,6 +304,7 @@ export interface PendingAssignment {
   gross_cents: number
   auto_approve_at: string
   auto_approve_in_seconds: number
+  can_contest: boolean
 }
 
 /** "23 h 10 min" a partir de uma quantidade de segundos. */

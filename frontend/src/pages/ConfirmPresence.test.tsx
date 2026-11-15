@@ -41,6 +41,7 @@ const pending = {
   gross_cents: 10000,
   auto_approve_at: '2026-11-04T16:00:00Z',
   auto_approve_in_seconds: 23 * 3600 + 10 * 60,
+  can_contest: true,
 }
 
 const session: Record<string, Handler> = {
