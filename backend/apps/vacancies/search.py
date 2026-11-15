@@ -175,8 +175,27 @@ def detail_vacancy(pk):
     )
 
 
+def serialize_rules(params):
+    """Regras exibidas antes de se candidatar (US16), só com números de `PlatformParameters`.
+
+    Prazos em minutos, distância em metros e bloqueios em dias; o frontend monta o texto.
+    """
+    return {
+        "free_cancel_minutes_before": params.free_cancel_minutes_before,
+        "late_cancel_block_days": params.late_cancel_block_days,
+        "geofence_radius_m": params.geofence_radius_m,
+        "checkin_open_minutes_before": params.checkin_open_minutes_before,
+        "no_show_tolerance_minutes": params.no_show_tolerance_minutes,
+        "no_show_limit": params.no_show_limit,
+        "no_show_window_days": params.no_show_window_days,
+        "suspension_days": params.suspension_days,
+        "contest_window_minutes": params.contest_window_minutes,
+    }
+
+
 def serialize_detail(vacancy, user, now=None):
-    data = serialize_card(vacancy)
+    params = PlatformParameters.get()
+    data = serialize_card(vacancy, params=params)
     worker = Worker.objects.filter(user=user).first() if user and user.is_authenticated else None
     mine = (
         Application.objects.filter(vacancy=vacancy, worker=worker).first() if worker else None
@@ -190,6 +209,7 @@ def serialize_detail(vacancy, user, now=None):
             "zip_code": vacancy.zip_code,
             "latitude": str(vacancy.latitude),
             "longitude": str(vacancy.longitude),
+            "rules": serialize_rules(params),
             "apply_blocker": apply_blocker(user, now, vacancy),
             "my_application": (
                 {"id": mine.pk, "status": mine.status, "status_label": mine.get_status_display()}

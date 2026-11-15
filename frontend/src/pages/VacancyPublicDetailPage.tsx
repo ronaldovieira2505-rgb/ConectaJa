@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, brl, formatShift, type JobItem, type VacancyPublicDetail } from '../api'
+import {
+  api,
+  brl,
+  formatDays,
+  formatMinutes,
+  formatShift,
+  type JobItem,
+  type VacancyPublicDetail,
+  type VacancyRules,
+} from '../api'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 
 /** Detalhe da vaga para o prestador: descrição, endereço com mapa e valor líquido (US17). */
@@ -45,6 +54,7 @@ export default function VacancyPublicDetailPage() {
   if (!vacancy) return <Loading rows={1} />
 
   const sent = Boolean(vacancy.my_application)
+  const rules = vacancy.rules as VacancyRules | undefined
 
   const address = [
     [vacancy.street, vacancy.number].filter(Boolean).join(', '),
@@ -113,6 +123,35 @@ export default function VacancyPublicDetailPage() {
           </dd>
         </div>
       </dl>
+      {rules && (
+        <section aria-labelledby="regras-da-vaga">
+          <h2 id="regras-da-vaga">Regras desta vaga</h2>
+          <ul>
+            <li>
+              Cancelamento sem penalidade até {formatMinutes(rules.free_cancel_minutes_before)}{' '}
+              antes do início; depois disso, {formatDays(rules.late_cancel_block_days)} sem poder
+              se candidatar.
+            </li>
+            <li>
+              Check-in pelo celular a até {rules.geofence_radius_m} m do local, a partir de{' '}
+              {formatMinutes(rules.checkin_open_minutes_before)} antes do início; sem check-in até{' '}
+              {formatMinutes(rules.no_show_tolerance_minutes)} após o início conta como falta.
+            </li>
+            <li>
+              {rules.no_show_limit} {rules.no_show_limit === 1 ? 'falta' : 'faltas'} em{' '}
+              {rules.no_show_window_days} dias suspendem a conta por{' '}
+              {formatDays(rules.suspension_days)}.
+            </li>
+            <li>
+              Pagamento garantido: o valor já está em custódia. Você recebe{' '}
+              {brl(vacancy.net_cents)} (valor do turno menos {vacancy.fee_percent}%) após a
+              confirmação das horas, ou automaticamente{' '}
+              {formatMinutes(rules.contest_window_minutes)} depois do check-out se a empresa não
+              responder.
+            </li>
+          </ul>
+        </section>
+      )}
       <div className="acoes">
         <Button disabled={!vacancy.can_apply} busy={applying} onClick={handleApply}>
           {sent ? 'Candidatura enviada' : 'Quero esta vaga'}
