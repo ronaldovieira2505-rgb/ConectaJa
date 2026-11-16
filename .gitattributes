@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Scripts executados no Linux (Azure App Service)
+*.sh text eol=lf

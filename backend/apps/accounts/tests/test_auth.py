@@ -233,3 +233,17 @@ def test_lista_notificacoes_proprias_com_contador_e_marca_como_lida():
 
 def test_notificacoes_exigem_autenticacao():
     assert APIClient().get("/api/notifications/").status_code == 403
+
+
+def test_login_bloqueia_apos_muitas_tentativas_seguidas():
+    """Segurança: adivinhar senha por força bruta esbarra no limite por IP (10 por minuto)."""
+    worker = make_worker()
+    client = APIClient()
+
+    for _ in range(10):
+        assert post_login(client, worker.user.email, "senha-errada").status_code == 400
+
+    blocked = post_login(client, worker.user.email, PASSWORD)
+
+    assert blocked.status_code == 429
+    assert client.get("/api/auth/me/").status_code == 403

@@ -6,6 +6,7 @@ from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .models import Role
@@ -75,6 +76,9 @@ class CsrfView(APIView):
 class LoginView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
+    # Freia a adivinhação de senha: taxa em `DEFAULT_THROTTLE_RATES["login"]`.
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
