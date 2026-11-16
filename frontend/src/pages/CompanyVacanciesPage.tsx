@@ -2,26 +2,40 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, brl, formatShift, type Vacancy, type VacancyList } from '../api'
 import { Alert, Badge, Card, Loading, Slots } from '../components/ui'
-import { badgeToneFor, toneFor } from '../status'
+import VacancyCover from '../components/VacancyCover'
+import { badgeToneFor } from '../status'
 
-/** Uma vaga por ficha: estado na lombada, valor por pessoa e posições. */
+/** Uma vaga por cartão: imagem do local, estado, valor por pessoa e posições. */
 function VacancyRow({ vacancy }: { vacancy: Vacancy }) {
   return (
-    <li>
-      <article className={`row row-${toneFor(vacancy.status)}`}>
-        <div>
-          <h2 className="row-titulo">
-            <Link to={`/empresa/vagas/${vacancy.id}`}>{vacancy.title}</Link>
+    <li className="min-w-0">
+      <article className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-regua bg-papel transition-shadow focus-within:shadow-[0_8px_24px_rgb(32_32_32/8%)] hover:shadow-[0_8px_24px_rgb(32_32_32/8%)] motion-reduce:transition-none">
+        <VacancyCover
+          photoUrl={vacancy.photo_url}
+          category={vacancy.category}
+          className="aspect-[16/9] w-full"
+        />
+        <div className="flex flex-1 flex-col gap-3 p-5">
+          <p className="m-0">
             <Badge tone={badgeToneFor(vacancy.status)}>{vacancy.status_label}</Badge>
-          </h2>
-          <p className="row-quando">{formatShift(vacancy.starts_at, vacancy.ends_at)}</p>
-        </div>
-        <div className="row-lado">
-          <span className="row-valor">
-            {brl(vacancy.pay_per_person_cents)}
-            <small>por pessoa</small>
-          </span>
-          <Slots filled={vacancy.filled_positions} total={vacancy.positions} />
+          </p>
+          <div className="flex flex-col gap-1">
+            <h2 className="m-0 text-[17px] leading-6 tracking-normal text-balance">
+              <Link to={`/empresa/vagas/${vacancy.id}`} className="no-underline after:absolute after:inset-0 after:rounded-[24px] after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-foco">
+                {vacancy.title}
+              </Link>
+            </h2>
+            <p className="m-0 text-[13px] leading-5 text-tinta-media">
+              {formatShift(vacancy.starts_at, vacancy.ends_at)}
+            </p>
+          </div>
+          <div className="mt-auto flex items-end justify-between gap-3 border-t border-regua pt-4">
+            <p className="m-0 flex flex-col">
+              <span className="text-[12px] leading-4 text-tinta-media">Por pessoa</span>
+              <span className="text-[22px] leading-7">{brl(vacancy.pay_per_person_cents)}</span>
+            </p>
+            <Slots filled={vacancy.filled_positions} total={vacancy.positions} />
+          </div>
         </div>
       </article>
     </li>
@@ -48,9 +62,6 @@ export default function CompanyVacanciesPage() {
         <p>
           Total retido em custódia
           <strong className="dinheiro">{brl(data?.total_retained_cents ?? 0)}</strong>
-          <span className="dinheiro-nota">
-            O dinheiro fica no PSP até a presença ser confirmada.
-          </span>
         </p>
         <div className="acoes">
           <Link to="/empresa/vagas/nova" className="btn btn-primary">
@@ -66,17 +77,14 @@ export default function CompanyVacanciesPage() {
           <Card>
             <div className="vazio">
               <h2>Publique o primeiro turno</h2>
-              <p>
-                Descreva o serviço, diga quantas pessoas precisa e pague em custódia. A vaga fica
-                visível para os prestadores aprovados assim que o pagamento é confirmado.
-              </p>
+              <p>A vaga aparece na busca assim que o pagamento é confirmado.</p>
               <Link to="/empresa/vagas/nova" className="btn btn-primary">
                 Nova vaga
               </Link>
             </div>
           </Card>
         ) : (
-          <ul className="row-list">
+          <ul className="m-0 mt-6 grid list-none grid-cols-1 gap-4 p-0 min-[600px]:grid-cols-2 min-[900px]:grid-cols-3">
             {data.results.map((v) => (
               <VacancyRow key={v.id} vacancy={v} />
             ))}

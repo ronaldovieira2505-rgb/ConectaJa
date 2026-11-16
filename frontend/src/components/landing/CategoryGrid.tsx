@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { VacancyCard } from '../../api'
 import { CATEGORIES } from '../../categories'
-import { categoryIcon } from './categoryIcons'
+import CategoryIcon from '../CategoryIcon'
 
 /** Atalhos para a busca já filtrada por categoria, com a contagem das vagas abertas. */
 export default function CategoryGrid({ vacancies }: { vacancies: VacancyCard[] }) {
@@ -14,7 +14,6 @@ export default function CategoryGrid({ vacancies }: { vacancies: VacancyCard[] }
       </h2>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 min-[480px]:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
         {CATEGORIES.map(({ value, label }) => {
-          const Icon = categoryIcon(value)
           const count = open(value)
           return (
             <li key={value} className="min-w-0">
@@ -23,7 +22,7 @@ export default function CategoryGrid({ vacancies }: { vacancies: VacancyCard[] }
                 className="group flex h-full flex-col items-center gap-3 rounded-[24px] bg-ficha px-3 py-5 text-center no-underline transition-colors hover:bg-controle motion-reduce:transition-none"
               >
                 <span className="grid size-12 place-items-center rounded-full bg-papel">
-                  <Icon className="size-6" strokeWidth={1.25} aria-hidden="true" />
+                  <CategoryIcon category={value} className="size-6" strokeWidth={1.25} />
                 </span>
                 <span className="text-[13px] leading-4">{label}</span>
                 {count > 0 && (

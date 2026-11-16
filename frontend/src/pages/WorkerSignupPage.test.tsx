@@ -106,8 +106,8 @@ describe('Cadastro de prestador', () => {
 
     expect(await screen.findByRole('heading', { name: 'Complete seu perfil' })).toBeInTheDocument()
     const steps = screen.getByRole('list', { name: 'Etapas do perfil' })
-    expect(steps).toHaveTextContent('1) Documentos e selfie')
-    expect(steps).toHaveTextContent('2) Chave PIX')
+    expect(steps).toHaveTextContent('1 Documentos e selfie')
+    expect(steps).toHaveTextContent('2 Chave PIX')
     expect(steps).toHaveTextContent('Pendente')
     expect(screen.getByText(/\*\*\*\.456\.789-\*\*/)).toBeInTheDocument()
     expect(registered).toMatchObject({

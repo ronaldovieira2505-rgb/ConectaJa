@@ -182,13 +182,7 @@ describe('Meus trabalhos (US38)', () => {
     mockApi({ ...session, 'GET /api/workers/me/jobs/': () => ({ body: { groups } }) })
     renderAt('/meus-trabalhos')
 
-    for (const title of [
-      'Aguardando',
-      'Aprovadas / Próximos turnos',
-      'Em andamento',
-      'Concluídas',
-      'Encerradas',
-    ]) {
+    for (const title of ['Aguardando', 'Próximos turnos', 'Concluídas', 'Encerradas']) {
       expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
     }
     const waiting = screen.getByRole('region', { name: 'Aguardando' })
@@ -198,7 +192,8 @@ describe('Meus trabalhos (US38)', () => {
     expect(screen.getByText('Turno confirmado')).toBeInTheDocument()
     expect(screen.getByText('Turno pago')).toBeInTheDocument()
     expect(screen.getByText('Vaga recusada')).toBeInTheDocument()
-    expect(screen.getByText('Nenhum turno em andamento.')).toBeInTheDocument()
+    // Grupo sem itens não aparece.
+    expect(screen.queryByRole('heading', { name: 'Em andamento' })).not.toBeInTheDocument()
   })
 
   it('desiste de uma candidatura pendente e recarrega a lista', async () => {

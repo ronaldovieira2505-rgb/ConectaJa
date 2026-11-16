@@ -3,10 +3,12 @@
 from decimal import Decimal
 
 from django.db.models import Count, Q
+from django.http import FileResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,7 +21,7 @@ from apps.core.models import PlatformParameters
 from apps.core.permissions import IsCompanyUser
 from apps.payments import services as payments
 from apps.payments.models import Custody, LedgerEntry
-from apps.vacancies import search, services
+from apps.vacancies import photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
 from integrations.payments import PaymentGatewayError
 
@@ -104,6 +106,7 @@ def serialize_vacancy(vacancy):
         "status": vacancy.status,
         "status_label": vacancy.get_status_display(),
         "created_at": vacancy.created_at.isoformat(),
+        "photo_url": photos.photo_url(vacancy),
     }
 
 
@@ -289,6 +292,58 @@ class VacancyDetailView(PublicReadMixin, CompanyAreaView):
         if vacancy is None:
             return Response({"detail": "Vaga não encontrada."}, status=404)
         return Response(search.serialize_detail(vacancy, request.user))
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class VacancyPhotoView(PublicReadMixin, CompanyAreaView):
+    """Foto do local: qualquer pessoa vê; só a empresa dona da vaga envia ou remove."""
+
+    parser_classes = [MultiPartParser]
+
+    def get(self, request, pk):
+        vacancy = Vacancy.objects.filter(pk=pk).exclude(photo="").first()
+        if vacancy is None:
+            return Response({"detail": "Foto não encontrada."}, status=404)
+        try:
+            handle = vacancy.photo.open("rb")
+        except FileNotFoundError:
+            return Response({"detail": "Foto não encontrada."}, status=404)
+        response = FileResponse(handle, content_type=photos.content_type_of(vacancy.photo.name))
+        # O endereço traz a versão do arquivo (?v=), então o navegador pode guardar a foto.
+        response["Cache-Control"] = "public, max-age=86400"
+        return response
+
+    def own_vacancy(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company)
+        if denied:
+            return None, None, denied
+        vacancy = self.vacancies(company).filter(pk=pk).first()
+        if vacancy is None:
+            return None, None, Response({"detail": "Vaga não encontrada."}, status=404)
+        return company, vacancy, None
+
+    def change(self, request, pk, action):
+        company, vacancy, error = self.own_vacancy(request, pk)
+        if error:
+            return error
+        try:
+            action(vacancy)
+        except photos.PhotoLockedError as locked:
+            return Response({"detail": str(locked)}, status=409)
+        except DomainError as invalid:
+            return Response({"detail": str(invalid)}, status=400)
+        data = serialize_vacancy(self.vacancies(company).get(pk=pk))
+        data["payment_method"] = company.preferred_payment_method
+        return Response(data)
+
+    def post(self, request, pk):
+        return self.change(
+            request, pk, lambda vacancy: photos.set_photo(vacancy, request.FILES.get("photo"))
+        )
+
+    def delete(self, request, pk):
+        return self.change(request, pk, photos.remove_photo)
 
 
 @method_decorator(csrf_protect, name="dispatch")

@@ -1,14 +1,16 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, ApiError, brl, formatShift, type Vacancy } from '../api'
 import { CATEGORIES } from '../categories'
 import CancelReasonForm from '../components/CancelReasonForm'
 import { Alert, Badge, Button, Card, Field, Loading, SelectField, Slots } from '../components/ui'
+import VacancyCover from '../components/VacancyCover'
 import { badgeToneFor, toneFor } from '../status'
 import PendingAssignmentsSection from './PendingAssignments'
 import VacancyCandidatesSection from './VacancyCandidates'
 
 const METHODS: Record<string, string> = { PIX: 'PIX', BOLETO: 'boleto', CARTAO: 'cartão' }
+const PHOTO_TYPES = 'image/jpeg,image/png,image/webp'
 const READ_ONLY_HINT =
   'Para alterar valor ou número de pessoas, remova o anúncio (estorno total) e publique um novo.'
 
@@ -32,6 +34,7 @@ export default function CompanyVacancyDetailPage() {
   const [removed, setRemoved] = useState(false)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [cancelled, setCancelled] = useState(false)
+  const [sendingPhoto, setSendingPhoto] = useState(false)
   const [form, setForm] = useState({
     title: '',
     category: '',
@@ -70,6 +73,34 @@ export default function CompanyVacancyDetailPage() {
       setError(e instanceof ApiError ? e.message : 'Não foi possível concluir o pagamento.')
     } finally {
       setPaying(false)
+    }
+  }
+
+  async function sendPhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = '' // permite escolher o mesmo arquivo de novo
+    if (!file) return
+    setError('')
+    setSendingPhoto(true)
+    const upload = new FormData()
+    upload.append('photo', file)
+    try {
+      setVacancy(
+        await api<Vacancy>(`/api/vacancies/${id}/photo/`, { method: 'POST', form: upload }),
+      )
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível enviar a foto.')
+    } finally {
+      setSendingPhoto(false)
+    }
+  }
+
+  async function removePhoto() {
+    setError('')
+    try {
+      setVacancy(await api<Vacancy>(`/api/vacancies/${id}/photo/`, { method: 'DELETE' }))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível remover a foto.')
     }
   }
 
@@ -182,23 +213,48 @@ export default function CompanyVacancyDetailPage() {
       )}
       {vacancy && !editing && (
         <>
-          <h1>{vacancy.title}</h1>
-          <p>
-            <Badge tone={badgeToneFor(vacancy.status)}>{vacancy.status_label}</Badge>
-          </p>
-          <p>{vacancy.description}</p>
-          <dl className="linhas">
-            <div>
-              <dt>Serviço</dt>
-              <dd>{vacancy.category_label}</dd>
+          <VacancyCover
+            photoUrl={vacancy.photo_url}
+            category={vacancy.category}
+            alt="Foto do local do turno"
+            className="mb-4 aspect-[16/9] w-full rounded-[24px] md:aspect-[16/7]"
+          />
+          {!['FINALIZADA', 'CANCELADA'].includes(vacancy.status) && (
+            <div className="acoes">
+              <label className={`btn btn-secondary ${sendingPhoto ? 'btn-busy' : ''}`}>
+                {vacancy.photo_url ? 'Trocar foto do local' : 'Enviar foto do local'}
+                <input
+                  type="file"
+                  accept={PHOTO_TYPES}
+                  className="sr-only"
+                  disabled={sendingPhoto}
+                  onChange={sendPhoto}
+                />
+              </label>
+              {vacancy.photo_url && (
+                <Button variant="secondary" onClick={removePhoto}>
+                  Remover foto
+                </Button>
+              )}
             </div>
-            <div>
-              <dt>Turno</dt>
-              <dd>{formatShift(vacancy.starts_at, vacancy.ends_at)}</dd>
+          )}
+          <h1>{vacancy.title}</h1>
+          <p className="marcadores">
+            <Badge tone={badgeToneFor(vacancy.status)}>{vacancy.status_label}</Badge>
+            <Badge>{vacancy.category_label}</Badge>
+          </p>
+          <dl className="fatos">
+            <div className="fato-destaque">
+              <dt>Total a pagar</dt>
+              <dd>{brl(vacancy.total_cents)}</dd>
             </div>
             <div>
               <dt>Valor por pessoa</dt>
               <dd>{brl(vacancy.pay_per_person_cents)}</dd>
+            </div>
+            <div>
+              <dt>Turno</dt>
+              <dd>{formatShift(vacancy.starts_at, vacancy.ends_at)}</dd>
             </div>
             <div>
               <dt>Posições</dt>
@@ -213,9 +269,21 @@ export default function CompanyVacancyDetailPage() {
               </div>
             )}
           </dl>
-          <p className="total">
-            Total a pagar <strong>{brl(vacancy.total_cents)}</strong>
-          </p>
+          <details className="ver-mais">
+            <summary>Ver mais sobre a vaga</summary>
+            <h2>O serviço</h2>
+            <p className="descricao">{vacancy.description}</p>
+            {(vacancy.street || vacancy.city) && (
+              <>
+                <h2>Endereço</h2>
+                <p>
+                  {[vacancy.street, [vacancy.city, vacancy.state].filter(Boolean).join('/')]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </>
+            )}
+          </details>
           {['PUBLICADA', 'CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
             <VacancyCandidatesSection vacancyId={vacancy.id} onChange={refreshVacancy} />
           )}

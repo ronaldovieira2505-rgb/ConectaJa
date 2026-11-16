@@ -4,6 +4,7 @@ import { homePathFor, useAuth } from './authContext'
 import Layout from './components/Layout'
 import { Loading } from './components/ui'
 import CompanyConfirmPresencePage from './pages/CompanyConfirmPresencePage'
+import CompanyProfilePage from './pages/CompanyProfilePage'
 import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
 import CompanyVacancyDetailPage from './pages/CompanyVacancyDetailPage'
@@ -12,7 +13,6 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import MyJobsPage from './pages/MyJobsPage'
 import WorkerWalletPage from './pages/WorkerWalletPage'
-import Placeholder from './pages/Placeholder'
 import VacancyPublicDetailPage from './pages/VacancyPublicDetailPage'
 import VacancySearchPage from './pages/VacancySearchPage'
 import SignupChoicePage from './pages/SignupChoicePage'
@@ -54,20 +54,7 @@ export default function AppRoutes() {
           <Route path="empresa/vagas/nova" element={<CompanyVacancyNewPage />} />
           <Route path="empresa/vagas/:id" element={<CompanyVacancyDetailPage />} />
           <Route path="empresa/confirmar-presenca" element={<CompanyConfirmPresencePage />} />
-          <Route
-            path="empresa/perfil"
-            element={
-              <Placeholder
-                title="Perfil da empresa"
-                issue="uma próxima issue"
-                next={{
-                  to: '/empresa/vagas',
-                  label: 'Ir para minhas vagas',
-                  hint: 'Os dados do cadastro já valem para publicar turnos e pagar em custódia.',
-                }}
-              />
-            }
-          />
+          <Route path="empresa/perfil" element={<CompanyProfilePage />} />
         </Route>
         <Route element={<RequireRole role="WORKER" />}>
           <Route path="prestador/vagas" element={<Navigate to="/vagas" replace />} />

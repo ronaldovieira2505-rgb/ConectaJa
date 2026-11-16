@@ -17,7 +17,7 @@ from apps.companies.views import digits_only, first_error
 from apps.core.exceptions import DomainError
 from apps.core.masking import mask_phone
 from apps.core.validators import is_valid_cpf
-from apps.workers import services
+from apps.workers import profile, services
 from apps.workers.models import Worker, WorkerDocument
 
 KINDS = list(WorkerDocument.Kind)
@@ -69,7 +69,27 @@ def serialize_worker(worker):
         "verification_status": worker.verification_status,
         "pix_key_type": worker.pix_key_type,
         "pix_key": worker.masked_pix_key,
-        "documents": [{"kind": kind.value, "uploaded": kind.value in uploaded} for kind in KINDS],
+        "documents": [
+            {
+                "kind": kind.value,
+                "label": kind.label,
+                "uploaded": kind.value in uploaded,
+                "url": (
+                    f"/api/workers/{worker.pk}/documents/{kind.value}/"
+                    if kind.value in uploaded
+                    else None
+                ),
+            }
+            for kind in KINDS
+        ],
+        "member_since": worker.user.date_joined.isoformat(),
+        "photo_url": (
+            f"/api/workers/{worker.pk}/documents/{WorkerDocument.Kind.SELFIE.value}/"
+            if WorkerDocument.Kind.SELFIE.value in uploaded
+            else None
+        ),
+        "stats": profile.worker_stats(worker),
+        "reviews": profile.recent_reviews(worker),
         "profile_steps": steps,
         "verification_message": "Aguardando verificação" if awaiting else "",
     }

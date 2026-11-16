@@ -7,6 +7,7 @@ from django.db.models import F, Q
 from django.utils import timezone
 
 from apps.core.models import PlatformParameters
+from apps.workers.models import private_storage
 
 
 class Vacancy(models.Model):
@@ -55,6 +56,9 @@ class Vacancy(models.Model):
         "status", max_length=30, choices=Status.choices, default=Status.AWAITING_PAYMENT
     )
     reopened = models.BooleanField("reaberta por falta", default=False)
+    photo = models.FileField(
+        "foto do local", upload_to="vacancy_photos/", storage=private_storage, blank=True
+    )
     created_at = models.DateTimeField("criada em", default=timezone.now)
 
     class Meta:

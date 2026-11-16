@@ -55,6 +55,7 @@ const vacancy = {
   payment_guaranteed: true,
   urgent: false,
   distance_km: null,
+  photo_url: null,
 }
 
 describe('Página inicial', () => {
@@ -96,9 +97,9 @@ describe('Página inicial', () => {
 
     renderHome()
 
-    const card = await screen.findByRole('link', { name: /Carga e descarga no Centro/ })
-    expect(card).toHaveAttribute('href', '/vagas/7')
-    expect(card).toHaveTextContent('R$ 97,00')
+    const link = await screen.findByRole('link', { name: 'Carga e descarga no Centro' })
+    expect(link).toHaveAttribute('href', '/vagas/7')
+    expect(link.closest('article')).toHaveTextContent('R$ 97,00')
     expect(screen.getByText(/1 vaga aberta agora/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Carga e descarga\s*1 vaga$/ })).toHaveAttribute(
       'href',

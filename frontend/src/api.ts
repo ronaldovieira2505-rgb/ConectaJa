@@ -89,6 +89,12 @@ export interface WorkerProfile {
   pix_key?: string
   verification_message?: string
   profile_steps: ProfileStep[]
+  // Perfil completo (foto, documentos, números e avaliações).
+  photo_url?: string | null
+  member_since?: string
+  documents?: WorkerDocumentInfo[]
+  stats?: WorkerStats
+  reviews?: WorkerReview[]
 }
 
 export interface AppNotification {
@@ -127,6 +133,7 @@ export interface Vacancy {
   status: string
   status_label: string
   payment_method?: string
+  photo_url: string | null
 }
 
 /** Candidato pendente: sem CPF, telefone nem PIX (US42). */
@@ -182,6 +189,7 @@ export interface VacancyCard {
   payment_guaranteed: boolean
   urgent: boolean
   distance_km: number | null
+  photo_url: string | null
 }
 
 /** Regras da plataforma vindas de `PlatformParameters` (US16): minutos, metros, dias e contagens. */
@@ -233,6 +241,8 @@ export interface JobItem {
   id: number
   vacancy_id: number
   title: string
+  category: string
+  photo_url: string | null
   company_name: string
   starts_at: string
   ends_at: string
@@ -350,4 +360,70 @@ export interface Wallet {
   fee_percent: number
   receivable: WalletReceivable[]
   released: WalletReleased[]
+}
+
+export interface WorkerDocumentInfo {
+  kind: string
+  label: string
+  uploaded: boolean
+  url: string | null
+}
+
+export interface WorkerStats {
+  completed_shifts: number
+  total_received_cents: number
+  rating_average: number | null
+  rating_count: number
+}
+
+export interface WorkerReview {
+  id: number
+  rating: number
+  comment: string
+  company_name: string
+  vacancy_title: string
+  created_at: string
+}
+
+export interface CompanyStats {
+  published_vacancies: number
+  finished_vacancies: number
+  completed_shifts: number
+  total_paid_cents: number
+}
+
+/** Perfil da empresa: cadastro verificado, apresentação, logo e números. */
+export interface CompanyProfile {
+  id: number
+  name: string
+  legal_name: string
+  trade_name: string
+  cnpj: string
+  state_registration: string
+  tax_regime_label: string
+  registration_status: string
+  street: string
+  number: string
+  complement: string
+  district: string
+  city: string
+  state: string
+  zip_code: string
+  phone: string
+  payment_method_label: string
+  verification_status: string
+  verification_label: string
+  description: string
+  logo_url: string | null
+  member_since: string
+  stats: CompanyStats
+}
+
+/** "nov. de 2026": desde quando a conta existe. */
+export function formatMonthYear(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+}
+
+export function formatCnpj(cnpj: string): string {
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
 }

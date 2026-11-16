@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { api, brl, formatShift, type VacancyCard } from '../api'
+import { useSearchParams } from 'react-router-dom'
+import { api, type VacancyCard } from '../api'
 import { CATEGORIES } from '../categories'
-import { Alert, Badge, Button, Card, Field, Loading, SelectField } from '../components/ui'
+import { Alert, Button, Card, Field, Loading, SelectField } from '../components/ui'
+import VacancyTile from '../components/VacancyTile'
 
 interface Filters {
   q: string
@@ -40,49 +41,6 @@ function buildQuery(filters: Filters, origin: Origin): string {
   }
   const query = params.toString()
   return query ? `?${query}` : ''
-}
-
-function place(v: VacancyCard): string {
-  return [v.district, v.city && v.state ? `${v.city}/${v.state}` : v.city].filter(Boolean).join(', ')
-}
-
-/** A lombada avisa o que é urgente; o resto fica no verde de "valor retido". */
-function toneFor(v: VacancyCard): string {
-  if (v.urgent) return 'row-colete'
-  return v.payment_guaranteed ? 'row-carimbo' : ''
-}
-
-/** Uma vaga por ficha: o que o prestador recebe vem primeiro. */
-function ResultRow({ vacancy }: { vacancy: VacancyCard }) {
-  return (
-    <li>
-      <article className={`row ${toneFor(vacancy)}`}>
-        <div>
-          <h2 className="row-titulo">
-            <Link to={`/vagas/${vacancy.id}`}>{vacancy.title}</Link>
-            {vacancy.urgent && <Badge tone="warning">Urgente</Badge>}
-            {vacancy.payment_guaranteed && <Badge tone="success">Pagamento garantido</Badge>}
-          </h2>
-          <p className="row-quando">{formatShift(vacancy.starts_at, vacancy.ends_at)}</p>
-          <p className="row-quando">
-            {vacancy.company_name} · {vacancy.category_label}
-          </p>
-          <p className="row-quando">
-            {place(vacancy)}
-            {vacancy.distance_km !== null && ` · ${vacancy.distance_km.toLocaleString('pt-BR')} km`}
-          </p>
-        </div>
-        <div className="row-lado">
-          <p className="recebe">Você recebe {brl(vacancy.net_cents)}</p>
-          <small className="letra-miuda">
-            Valor do turno {brl(vacancy.gross_cents)} · taxa {vacancy.fee_percent}% ·{' '}
-            {vacancy.remaining_positions}{' '}
-            {vacancy.remaining_positions === 1 ? 'vaga restante' : 'vagas restantes'}
-          </small>
-        </div>
-      </article>
-    </li>
-  )
 }
 
 /** Buscar vagas: texto, filtros (US13), proximidade (US14) e valor líquido (US17). */
@@ -200,9 +158,7 @@ export default function VacancySearchPage() {
           </div>
         </form>
         <p className="sub">
-          {origin
-            ? 'Ordenadas da mais próxima para a mais distante.'
-            : 'Ordenadas pela data de início. Libere a localização para ver as mais próximas.'}
+          {origin ? 'Mais próximas primeiro.' : 'Ordenadas pela data de início.'}
         </p>
       </Card>
 
@@ -212,17 +168,20 @@ export default function VacancySearchPage() {
         <Card>
           <div className="vazio">
             <h2>Nenhuma vaga com esses filtros</h2>
-            <p>
-              Tente ampliar o período, baixar o valor mínimo ou limpar os filtros para ver todos os
-              turnos abertos.
-            </p>
+            <p>Amplie o período, baixe o valor mínimo ou limpe os filtros.</p>
           </div>
         </Card>
       )}
       {results && results.length > 0 && (
-        <ul className="row-list" aria-busy={loading} data-atualizando={loading || undefined}>
+        <ul
+          className="resultados m-0 mt-6 grid list-none grid-cols-1 gap-4 p-0 min-[600px]:grid-cols-2 min-[900px]:grid-cols-3"
+          aria-busy={loading}
+          data-atualizando={loading || undefined}
+        >
           {results.map((v) => (
-            <ResultRow key={v.id} vacancy={v} />
+            <li key={v.id} className="min-w-0">
+              <VacancyTile vacancy={v} heading="h2" />
+            </li>
           ))}
         </ul>
       )}
