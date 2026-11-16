@@ -8,6 +8,7 @@ import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
 import CompanyVacancyDetailPage from './pages/CompanyVacancyDetailPage'
 import CompanyVacancyNewPage from './pages/CompanyVacancyNewPage'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import MyJobsPage from './pages/MyJobsPage'
 import WorkerWalletPage from './pages/WorkerWalletPage'
@@ -32,7 +33,8 @@ function RequireRole({ role }: { role: Role }) {
 function Home() {
   const { user, loading } = useAuth()
   if (loading) return <Loading rows={1} />
-  return <Navigate to={user ? homePathFor(user.role) : '/login'} replace />
+  // Visitante vê a página inicial; quem já entrou vai direto para a área do seu papel.
+  return user ? <Navigate to={homePathFor(user.role)} replace /> : <LandingPage />
 }
 
 export default function AppRoutes() {
@@ -71,7 +73,7 @@ export default function AppRoutes() {
           <Route path="prestador/vagas" element={<Navigate to="/vagas" replace />} />
           <Route path="meus-trabalhos" element={<MyJobsPage />} />
           <Route path="carteira" element={<WorkerWalletPage />} />
-          <Route path="prestador/perfil"element={<WorkerHomePage />} />
+          <Route path="prestador/perfil" element={<WorkerHomePage />} />
           <Route path="perfil/documentos" element={<WorkerDocumentsPage />} />
           <Route path="perfil/pix" element={<WorkerPixPage />} />
         </Route>
