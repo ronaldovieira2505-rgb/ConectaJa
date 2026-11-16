@@ -1,96 +1,83 @@
-import {
-  Camera,
-  HardHat,
-  PartyPopper,
-  ShoppingBasket,
-  Sparkles,
-  Truck,
-  Wrench,
-  type LucideIcon,
-} from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowRight, CalendarClock, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { api, brl, formatShift, type VacancyCard } from '../../api'
+import { brl, formatShift, type VacancyCard } from '../../api'
+import { categoryIcon } from './categoryIcons'
 
-const PREVIEW_SIZE = 3
+const PREVIEW_SIZE = 6
 
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  AJUDANTE_OBRA: HardHat,
-  CARGA_DESCARGA: Truck,
-  VAREJO: ShoppingBasket,
-  EVENTOS: PartyPopper,
-  FOTOGRAFIA: Camera,
-  LIMPEZA: Sparkles,
+const META = 'flex items-center gap-2 text-[13px] leading-5 text-tinta-media'
+const META_ICON = 'size-4 shrink-0'
+
+function place(vacancy: VacancyCard) {
+  return `${vacancy.district ? `${vacancy.district}, ` : ''}${vacancy.city}/${vacancy.state}`
 }
 
-/** Tons do gradiente da marca, um por posição na grade, para os cartões não ficarem iguais. */
-const TILE_TINTS = [
-  'bg-[color-mix(in_oklab,var(--gradiente-inicio)_16%,white)]',
-  'bg-[color-mix(in_oklab,var(--gradiente-meio)_14%,white)]',
-  'bg-[color-mix(in_oklab,var(--gradiente-fim)_16%,white)]',
-]
-
-const PILL =
-  'inline-flex min-h-8 items-center justify-center rounded-full px-4 text-[13px] leading-4 whitespace-nowrap'
-
-/** Amostra das vagas publicadas agora. Se a busca falhar, a seção simplesmente não aparece. */
-export default function OpenVacancies() {
-  const [vacancies, setVacancies] = useState<VacancyCard[]>([])
-
-  useEffect(() => {
-    let active = true
-    api<{ results: VacancyCard[] }>('/api/vacancies/')
-      .then((data) => active && setVacancies(data.results))
-      .catch(() => undefined)
-    return () => {
-      active = false
-    }
-  }, [])
-
+/** Vitrine das vagas publicadas agora. Sem vagas, a seção não aparece. */
+export default function OpenVacancies({ vacancies }: { vacancies: VacancyCard[] }) {
   if (vacancies.length === 0) return null
 
   const count = `${vacancies.length} ${vacancies.length === 1 ? 'vaga aberta' : 'vagas abertas'} agora`
 
   return (
     <section id="vagas-abertas" aria-labelledby="vagas-abertas-titulo">
-      <h2 id="vagas-abertas-titulo" className="sr-only">
-        Vagas abertas
-      </h2>
-      <ul className="m-0 grid list-none grid-cols-1 gap-10 p-0 min-[600px]:max-md:grid-cols-2 min-[600px]:max-md:gap-x-6 md:grid-cols-3 md:gap-coluna">
-        {vacancies.slice(0, PREVIEW_SIZE).map((vacancy, index) => {
-          const Icon = CATEGORY_ICONS[vacancy.category] ?? Wrench
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div>
+          <h2 id="vagas-abertas-titulo" className="m-0 text-[22px] leading-7">
+            Vagas abertas
+          </h2>
+          <p className="m-0 text-[13px] leading-5 text-tinta-media">{count}</p>
+        </div>
+        <Link to="/vagas" className="btn btn-secondary group gap-3">
+          Ver todas
+          <ArrowRight
+            className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+            strokeWidth={1.25}
+            aria-hidden="true"
+          />
+        </Link>
+      </div>
+      <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 min-[600px]:grid-cols-2 xl:grid-cols-3">
+        {vacancies.slice(0, PREVIEW_SIZE).map((vacancy) => {
+          const Icon = categoryIcon(vacancy.category)
           return (
             <li key={vacancy.id} className="min-w-0">
               <Link
                 to={`/vagas/${vacancy.id}`}
-                className="group flex flex-col gap-5 no-underline md:gap-6"
+                className="group flex h-full flex-col gap-4 rounded-[24px] border border-regua bg-papel p-5 no-underline transition-shadow hover:shadow-[0_8px_24px_rgb(32_32_32/8%)] motion-reduce:transition-none"
               >
-                <span
-                  className={`relative grid aspect-[432/360] w-full place-items-center overflow-hidden rounded-cartao ${TILE_TINTS[index % TILE_TINTS.length]}`}
-                >
-                  <Icon
-                    className="size-20 text-tinta/70 transition-transform duration-500 group-hover:scale-110 motion-reduce:transition-none"
-                    strokeWidth={0.75}
-                    aria-hidden="true"
-                  />
-                  <span className={`${PILL} absolute top-4 right-4 bg-controle`}>
+                <span className="flex items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ficha">
+                    <Icon className="size-5" strokeWidth={1.25} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] leading-4 text-tinta-media">
                     {vacancy.category_label}
                   </span>
-                  {vacancy.urgent && (
-                    <span className={`${PILL} absolute top-4 left-4 bg-vidro`}>Urgente</span>
-                  )}
+                  {vacancy.urgent && <span className="badge badge-warning">Urgente</span>}
                 </span>
-                <span className="flex flex-col items-center gap-2 text-center md:px-4">
-                  <span className="text-[15px] leading-6 text-balance">{vacancy.title}</span>
-                  <span className="text-[13px] leading-6 text-tinta-media">
-                    {formatShift(vacancy.starts_at, vacancy.ends_at)} ·{' '}
-                    {vacancy.district ? `${vacancy.district}, ` : ''}
-                    {vacancy.city}/{vacancy.state}
+                <span className="flex flex-col gap-1">
+                  <span className="text-[17px] leading-6 text-balance">{vacancy.title}</span>
+                  <span className="text-[13px] leading-5 text-tinta-media">
+                    {vacancy.company_name}
                   </span>
-                  <span
-                    className={`${PILL} bg-controle transition-colors group-hover:bg-[#20202016]`}
-                  >
-                    Você recebe {brl(vacancy.net_cents)}
+                </span>
+                <span className="flex flex-col gap-1.5">
+                  <span className={META}>
+                    <CalendarClock className={META_ICON} strokeWidth={1.25} aria-hidden="true" />
+                    {formatShift(vacancy.starts_at, vacancy.ends_at)}
+                  </span>
+                  <span className={META}>
+                    <MapPin className={META_ICON} strokeWidth={1.25} aria-hidden="true" />
+                    {place(vacancy)}
+                  </span>
+                </span>
+                <span className="mt-auto flex items-end justify-between gap-3 border-t border-regua pt-4">
+                  <span className="flex flex-col">
+                    <span className="text-[12px] leading-4 text-tinta-media">Você recebe</span>
+                    <span className="text-[22px] leading-7">{brl(vacancy.net_cents)}</span>
+                  </span>
+                  <span className="text-[12px] leading-4 text-tinta-media">
+                    {vacancy.remaining_positions}{' '}
+                    {vacancy.remaining_positions === 1 ? 'posição' : 'posições'}
                   </span>
                 </span>
               </Link>
@@ -98,12 +85,6 @@ export default function OpenVacancies() {
           )
         })}
       </ul>
-      <p className="mx-auto mt-10 mb-0 max-w-none text-center text-[13px] text-tinta-media">
-        {count} ·{' '}
-        <Link to="/vagas" className="text-tinta">
-          ver todas
-        </Link>
-      </p>
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, brl, formatShift, type VacancyCard } from '../api'
 import { CATEGORIES } from '../categories'
 import { Alert, Badge, Button, Card, Field, Loading, SelectField } from '../components/ui'
@@ -14,6 +14,16 @@ interface Filters {
 }
 
 const EMPTY: Filters = { q: '', category: '', date_from: '', date_to: '', min_pay: '' }
+
+/** Filtros que chegam pelo endereço (busca e categorias da página inicial). */
+function filtersFromUrl(params: URLSearchParams): Filters {
+  const category = params.get('category') ?? ''
+  return {
+    ...EMPTY,
+    q: params.get('q') ?? '',
+    category: CATEGORIES.some((c) => c.value === category) ? category : '',
+  }
+}
 
 type Origin = { lat: number; lng: number } | null
 
@@ -77,8 +87,10 @@ function ResultRow({ vacancy }: { vacancy: VacancyCard }) {
 
 /** Buscar vagas: texto, filtros (US13), proximidade (US14) e valor líquido (US17). */
 export default function VacancySearchPage() {
-  const [draft, setDraft] = useState<Filters>(EMPTY)
-  const [filters, setFilters] = useState<Filters>(EMPTY)
+  const [searchParams] = useSearchParams()
+  const [initial] = useState(() => filtersFromUrl(searchParams))
+  const [draft, setDraft] = useState<Filters>(initial)
+  const [filters, setFilters] = useState<Filters>(initial)
   const [origin, setOrigin] = useState<Origin>(null)
   const [results, setResults] = useState<VacancyCard[] | null>(null)
   const [error, setError] = useState('')

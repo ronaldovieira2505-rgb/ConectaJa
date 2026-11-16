@@ -1,29 +1,33 @@
-import { ArrowRight, ArrowUpRight, BadgeCheck, MapPin, Scale, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Building2, HardHat } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { api, type VacancyCard } from '../api'
+import CategoryGrid from '../components/landing/CategoryGrid'
 import Disclosure, { type DisclosureItem } from '../components/landing/Disclosure'
-import Hero from '../components/landing/Hero'
+import HomeSearch from '../components/landing/HomeSearch'
 import OpenVacancies from '../components/landing/OpenVacancies'
 
-const STEPS: DisclosureItem[] = [
-  {
-    title: 'A empresa publica e paga',
-    body: <p>O valor do turno fica retido em custódia antes de a vaga aparecer na busca.</p>,
-  },
-  {
-    title: 'O prestador se candidata',
-    body: <p>Ele vê quanto vai receber e as regras do turno. A empresa escolhe quem aprovar.</p>,
-  },
-  {
-    title: 'Presença confirmada, repasse feito',
-    body: <p>Check-in e check-out por localização. Horas confirmadas, o valor segue por PIX.</p>,
-  },
+const STEPS = [
+  { title: 'A empresa publica e paga', body: 'O valor fica retido antes de a vaga aparecer.' },
+  { title: 'O prestador se candidata', body: 'A empresa escolhe quem aprovar.' },
+  { title: 'Presença confirmada, PIX feito', body: 'Check-in e check-out por localização.' },
 ]
 
-const GUARANTEES = [
-  { icon: ShieldCheck, title: 'Pagamento em custódia', body: 'A vaga só é publicada depois de paga.' },
-  { icon: BadgeCheck, title: 'Cadastros verificados', body: 'CNPJ, documento, selfie e PIX do titular.' },
-  { icon: MapPin, title: 'Presença por localização', body: 'O check-in só vale no endereço do turno.' },
-  { icon: Scale, title: 'Regras iguais para os dois', body: 'Prazos conhecidos antes da candidatura.' },
+const SIDES = [
+  {
+    icon: HardHat,
+    title: 'Quero trabalhar',
+    body: 'Veja quanto recebe antes de se candidatar.',
+    action: 'Criar conta de prestador',
+    to: '/cadastro/prestador',
+  },
+  {
+    icon: Building2,
+    title: 'Quero contratar',
+    body: 'Publique um turno e escolha entre candidatos verificados.',
+    action: 'Cadastrar minha empresa',
+    to: '/cadastro/empresa',
+  },
 ]
 
 const QUESTIONS: DisclosureItem[] = [
@@ -31,8 +35,8 @@ const QUESTIONS: DisclosureItem[] = [
     title: 'Quanto custa para a empresa?',
     body: (
       <p>
-        A empresa paga exatamente o valor anunciado, sem mensalidade nem acréscimo. A taxa da
-        plataforma é descontada do repasse ao prestador e aparece em cada vaga.
+        O valor anunciado, sem mensalidade. A taxa da plataforma sai do repasse ao prestador e
+        aparece em cada vaga.
       </p>
     ),
   },
@@ -40,35 +44,17 @@ const QUESTIONS: DisclosureItem[] = [
     title: 'Quando o prestador recebe?',
     body: (
       <p>
-        Depois do check-out, quando a empresa confirma as horas. Se ela não responder dentro do
-        prazo, a aprovação é automática e o valor vai para a carteira.
+        Depois do check-out, quando a empresa confirma as horas. Sem resposta no prazo, a aprovação
+        é automática.
       </p>
     ),
   },
   {
-    title: 'E se alguém faltar?',
+    title: 'E se alguém faltar ou cancelar?',
     body: (
       <p>
-        A falta é registrada depois da tolerância, a posição volta para a busca como urgente e o
-        valor retido não é repassado. Faltas repetidas suspendem o cadastro.
-      </p>
-    ),
-  },
-  {
-    title: 'Dá para cancelar?',
-    body: (
-      <p>
-        Sim. Com antecedência não há penalidade para nenhum dos lados, e a empresa recebe o
-        estorno. Os prazos aparecem na vaga antes da candidatura.
-      </p>
-    ),
-  },
-  {
-    title: 'Quem pode se cadastrar?',
-    body: (
-      <p>
-        Empresas com CNPJ ativo e pessoas físicas maiores de 18 anos, com documento com foto,
-        selfie e chave PIX própria. Todo cadastro passa por verificação.
+        A posição volta para a busca como urgente. Os prazos e penalidades aparecem na vaga antes
+        da candidatura.
       </p>
     ),
   },
@@ -76,120 +62,90 @@ const QUESTIONS: DisclosureItem[] = [
     title: 'O pagamento já é real?',
     body: (
       <p>
-        Ainda não. Nesta versão o pagamento é simulado: o fluxo de custódia e repasse é o mesmo,
-        mas nenhum valor é cobrado de verdade.
+        Ainda não. Nesta versão o pagamento é simulado: o fluxo é o mesmo, mas nenhum valor é
+        cobrado.
       </p>
     ),
   },
 ]
 
-const TEXT_COLUMN = 'flex flex-col items-start gap-5 px-1 md:px-0 md:py-4 xl:gap-6 xl:p-6'
-const ARROW = 'size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none'
+const SECTION_TITLE = 'mb-5 text-[22px] leading-7'
 
-/** Página inicial pública: explica a proposta para os dois lados e leva ao cadastro ou à busca. */
+/** Página inicial pública: busca, categorias e vitrine de vagas, como numa loja. */
 export default function LandingPage() {
-  return (
-    <div className="flex flex-col gap-secao">
-      <div className="flex flex-col gap-6 md:gap-10">
-        <Hero
-          title="Turno combinado, pagamento garantido"
-          caption="Turnos curtos de trabalho manual. O valor fica retido antes de o turno começar e é liberado com a presença confirmada."
-          notice="Só aparece na busca a vaga que já foi paga."
-        />
-        <OpenVacancies />
-        <div className="flex flex-wrap justify-center gap-2">
-          <Link to="/vagas" className="btn btn-primary">
-            Ver vagas abertas
-          </Link>
-          <Link to="/cadastro/empresa" className="btn btn-secondary">
-            Publicar um turno
-          </Link>
-        </div>
-      </div>
+  const [vacancies, setVacancies] = useState<VacancyCard[]>([])
 
-      <section
-        id="como-funciona"
-        aria-labelledby="como-funciona-titulo"
-        className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] md:gap-coluna xl:grid-cols-3 [&>*]:min-w-0"
-      >
-        <div className={TEXT_COLUMN}>
-          <h2 id="como-funciona-titulo" className="m-0 text-[28px] leading-8">
-            Do anúncio ao PIX em três passos.
-          </h2>
-          <p className="m-0">
-            Cada etapa tem um responsável e um prazo. Nada fica parado esperando alguém lembrar.
-          </p>
-          <Disclosure name="passos" items={STEPS} />
-          <Link to="/cadastro/prestador" className="btn btn-secondary group gap-4">
-            Quero trabalhar <ArrowRight className={`${ARROW} group-hover:translate-x-0.5`} strokeWidth={1.25} aria-hidden="true" />
-          </Link>
-        </div>
-        <div className="superficie-gradiente relative flex aspect-[904/640] w-full flex-col justify-end gap-2 overflow-hidden rounded-cartao p-5 md:self-center md:p-8 xl:col-span-2 xl:aspect-[904/516] xl:self-start">
-          {['Vaga publicada e paga', 'Candidatura aprovada', 'Check-out confirmado'].map(
-            (label, index) => (
-              <p
-                key={label}
-                className="m-0 flex w-fit items-center gap-3 rounded-full bg-vidro py-2 pr-5 pl-2 text-[13px] leading-4 backdrop-blur-flutuante"
-                style={{ marginLeft: `${index * 8}%` }}
+  useEffect(() => {
+    let active = true
+    api<{ results: VacancyCard[] }>('/api/vacancies/')
+      .then((data) => active && setVacancies(data.results))
+      .catch(() => undefined) // sem vitrine, a página continua útil pela busca e pelas categorias
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return (
+    <div className="flex flex-col gap-12 md:gap-16">
+      <HomeSearch />
+      <CategoryGrid vacancies={vacancies} />
+      <OpenVacancies vacancies={vacancies} />
+
+      <section id="como-funciona" aria-labelledby="como-funciona-titulo">
+        <h2 id="como-funciona-titulo" className={SECTION_TITLE}>
+          Como funciona
+        </h2>
+        <ol className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-3">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="flex items-start gap-4 rounded-[24px] bg-ficha p-5">
+              <span
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-tinta text-[13px] text-papel"
+                aria-hidden="true"
               >
-                <span className="grid size-6 place-items-center rounded-full bg-tinta text-[11px] text-papel">
-                  {index + 1}
-                </span>
-                {label}
-              </p>
-            ),
-          )}
-        </div>
+                {index + 1}
+              </span>
+              <span className="flex flex-col gap-1">
+                <span className="text-[15px] leading-6">{step.title}</span>
+                <span className="text-[13px] leading-5 text-tinta-media">{step.body}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      <section
-        id="para-quem"
-        aria-labelledby="para-quem-titulo"
-        className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:gap-coluna xl:grid-cols-3 [&>*]:min-w-0"
-      >
-        <ul className="m-0 grid list-none grid-cols-1 gap-x-coluna gap-y-8 rounded-cartao bg-ficha p-6 min-[480px]:grid-cols-2 md:self-center md:p-10 xl:col-span-2 xl:self-start">
-          {GUARANTEES.map(({ icon: Icon, title, body }) => (
-            <li key={title} className="flex flex-col gap-2">
-              <Icon className="mb-2 size-6" strokeWidth={1.25} aria-hidden="true" />
-              <h3 className="m-0 text-[15px] leading-6 tracking-normal">{title}</h3>
-              <p className="m-0 text-[13px] leading-6 text-tinta-media">{body}</p>
+      <section aria-labelledby="comece-titulo">
+        <h2 id="comece-titulo" className={SECTION_TITLE}>
+          Comece agora
+        </h2>
+        <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2">
+          {SIDES.map(({ icon: Icon, title, body, action, to }) => (
+            <li
+              key={to}
+              className="flex flex-col items-start gap-4 rounded-cartao border border-regua bg-papel p-6 md:p-8"
+            >
+              <Icon className="size-7" strokeWidth={1.25} aria-hidden="true" />
+              <div className="flex flex-col gap-1">
+                <h3 className="m-0 text-[17px] leading-6 tracking-normal">{title}</h3>
+                <p className="m-0 text-[13px] leading-5 text-tinta-media">{body}</p>
+              </div>
+              <Link to={to} className="btn btn-primary group mt-auto gap-3">
+                {action}
+                <ArrowRight
+                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                  strokeWidth={1.25}
+                  aria-hidden="true"
+                />
+              </Link>
             </li>
           ))}
         </ul>
-        <div className={TEXT_COLUMN}>
-          <h2 id="para-quem-titulo" className="m-0 text-[28px] leading-8">
-            Dois lados.
-            <br />O mesmo combinado.
-          </h2>
-          <p className="m-0">
-            Para a empresa: publicar o turno em minutos, escolher entre candidatos verificados e
-            pagar só o valor anunciado.
-          </p>
-          <p className="m-0">
-            Para o prestador: saber quanto recebe antes de se candidatar, com o pagamento já
-            garantido.
-          </p>
-          <Link to="/cadastro/empresa" className="btn btn-secondary group gap-4">
-            Cadastrar minha empresa{' '}
-            <ArrowUpRight className={`${ARROW} group-hover:translate-x-0.5`} strokeWidth={1.25} aria-hidden="true" />
-          </Link>
-        </div>
       </section>
 
-      <section
-        id="perguntas"
-        aria-labelledby="perguntas-titulo"
-        className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-coluna [&>*]:min-w-0"
-      >
-        <div className="flex flex-col gap-4 px-1 md:gap-6 md:px-0">
-          <h2 id="perguntas-titulo" className="m-0 text-[28px] leading-8 text-balance">
-            Você deve ter algumas perguntas.
-          </h2>
-          <p className="m-0 text-tinta-media">Sobre o pagamento, as regras e o cadastro.</p>
-        </div>
-        <div className="md:col-span-2">
-          <Disclosure name="perguntas" items={QUESTIONS} size="large" />
-        </div>
+      <section id="perguntas" aria-labelledby="perguntas-titulo" className="mx-auto w-full max-w-[800px]">
+        <h2 id="perguntas-titulo" className={SECTION_TITLE}>
+          Perguntas frequentes
+        </h2>
+        <Disclosure name="perguntas" items={QUESTIONS} size="large" />
       </section>
     </div>
   )

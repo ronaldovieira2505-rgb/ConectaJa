@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import AuthProvider from '../AuthProvider'
@@ -61,7 +62,7 @@ describe('Página inicial', () => {
     vi.unstubAllGlobals()
   })
 
-  it('apresenta a proposta ao visitante e leva aos dois cadastros e à busca', async () => {
+  it('abre com a busca, as categorias e os dois cadastros', async () => {
     mockApi({
       'GET /api/auth/me/': anonymous,
       'GET /api/vacancies/': () => ({ body: { results: [] } }),
@@ -70,14 +71,18 @@ describe('Página inicial', () => {
     renderHome()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: /pagamento garantido/i }),
+      await screen.findByRole('heading', { level: 1, name: /que turno você procura/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ver vagas abertas' })).toHaveAttribute('href', '/vagas')
+    expect(screen.getByRole('searchbox', { name: 'Buscar vagas' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Limpeza' })).toHaveAttribute(
+      'href',
+      '/vagas?category=LIMPEZA',
+    )
     expect(screen.getByRole('link', { name: 'Cadastrar minha empresa' })).toHaveAttribute(
       'href',
       '/cadastro/empresa',
     )
-    expect(screen.getByRole('link', { name: 'Quero trabalhar' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Criar conta de prestador' })).toHaveAttribute(
       'href',
       '/cadastro/prestador',
     )
@@ -95,6 +100,28 @@ describe('Página inicial', () => {
     expect(card).toHaveAttribute('href', '/vagas/7')
     expect(card).toHaveTextContent('R$ 97,00')
     expect(screen.getByText(/1 vaga aberta agora/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Carga e descarga\s*1 vaga$/ })).toHaveAttribute(
+      'href',
+      '/vagas?category=CARGA_DESCARGA',
+    )
+  })
+
+  it('leva o termo digitado para a busca de vagas', async () => {
+    const filtered = vi.fn(() => ({ body: { results: [vacancy] } }))
+    mockApi({
+      'GET /api/auth/me/': anonymous,
+      'GET /api/vacancies/': () => ({ body: { results: [] } }),
+      'GET /api/vacancies/?q=carga': filtered,
+    })
+
+    renderHome()
+
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar vagas' }), 'carga')
+    await userEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Buscar vagas' })).toBeInTheDocument()
+    expect(filtered).toHaveBeenCalled()
+    expect(screen.getByRole('searchbox', { name: 'Buscar' })).toHaveValue('carga')
   })
 
   it('continua de pé quando a busca de vagas falha', async () => {
@@ -105,7 +132,7 @@ describe('Página inicial', () => {
 
     renderHome()
 
-    expect(await screen.findByRole('heading', { name: /três passos/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Como funciona' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Vagas abertas' })).not.toBeInTheDocument()
   })
 })
