@@ -131,6 +131,71 @@ describe('Candidatos da vaga', () => {
     expect(await screen.findByRole('button', { name: 'Equipe completa' })).toBeDisabled()
   })
 
+  it('mostra a lista de espera numerada quando a equipe está completa (US43)', async () => {
+    mockApi({
+      ...session,
+      'GET /api/vacancies/7/candidates/': () => ({
+        body: {
+          positions: 1,
+          filled_positions: 1,
+          team_complete: true,
+          auto_call_waitlist: true,
+          candidates: [
+            { ...candidate, waitlist_position: 1 },
+            { ...candidate, id: 12, name: 'João', waitlist_position: 2 },
+          ],
+          team: [],
+        },
+      }),
+    })
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Lista de espera' })).toBeInTheDocument()
+    expect(screen.getByText('1º na lista de espera')).toBeInTheDocument()
+    expect(screen.getByText('2º na lista de espera')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Chamar automaticamente da lista de espera/)).toBeChecked()
+  })
+
+  it('não mostra a lista de espera enquanto há posição livre', async () => {
+    mockApi({
+      ...session,
+      'GET /api/vacancies/7/candidates/': () => ({
+        body: { positions: 2, filled_positions: 0, team_complete: false, candidates: [candidate], team: [] },
+      }),
+    })
+    renderPage()
+
+    expect(await screen.findByText('Maria')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Lista de espera' })).not.toBeInTheDocument()
+  })
+
+  it('desliga a chamada automática da lista de espera', async () => {
+    let enabled = true
+    const calls = mockApi({
+      ...session,
+      'GET /api/vacancies/7/candidates/': () => ({
+        body: {
+          positions: 1,
+          filled_positions: 1,
+          team_complete: true,
+          auto_call_waitlist: enabled,
+          candidates: [{ ...candidate, waitlist_position: 1 }],
+          team: [],
+        },
+      }),
+      'POST /api/vacancies/7/waitlist-auto-call/': (init) => {
+        enabled = JSON.parse(String(init?.body)).enabled
+        return { body: { auto_call_waitlist: enabled } }
+      },
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByLabelText(/Chamar automaticamente da lista de espera/))
+
+    expect(calls).toContain('POST /api/vacancies/7/waitlist-auto-call/')
+    expect(await screen.findByLabelText(/Chamar automaticamente/)).not.toBeChecked()
+  })
+
   it('recusa o candidato', async () => {
     let rejected = false
     const calls = mockApi({

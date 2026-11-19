@@ -9,6 +9,7 @@ from apps.core.exceptions import DomainError, InvalidTransition
 from apps.core.models import PlatformParameters
 from apps.vacancies import application_services as applications
 from apps.vacancies import review_services as reviews
+from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from apps.workers.models import Worker, WorkerDocument
@@ -102,17 +103,45 @@ class VacancyCandidatesView(CandidateAreaView):
         )
         filled = vacancy.filled_positions
         params = PlatformParameters.get()
+        team_complete = waitlist.is_team_complete(vacancy)
+        candidates = []
+        for index, application in enumerate(pending, start=1):
+            item = serialize_candidate(application, params)
+            # Equipe completa: os pendentes são a lista de espera, numerada pela ordem.
+            item["waitlist_position"] = index if team_complete else None
+            candidates.append(item)
         return Response(
             {
                 "positions": vacancy.positions,
                 "filled_positions": filled,
-                "team_complete": vacancy.unavailable_positions >= vacancy.positions,
+                "team_complete": team_complete,
+                "auto_call_waitlist": vacancy.auto_call_waitlist,
                 "free_cancel_minutes_before": params.free_cancel_minutes_before,
                 "no_show_window_days": params.no_show_window_days,
-                "candidates": [serialize_candidate(a, params) for a in pending],
+                "candidates": candidates,
                 "team": [serialize_team_member(a) for a in team],
             }
         )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class VacancyWaitlistSettingView(CandidateAreaView):
+    """`POST /api/vacancies/<id>/waitlist-auto-call/` com `{"enabled": true|false}` (US43)."""
+
+    def post(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company) if company is not None else None
+        if denied:
+            return denied
+        vacancy, error = self.own_vacancy(request, pk)
+        if error:
+            return error
+        enabled = request.data.get("enabled")
+        if not isinstance(enabled, bool):
+            return Response({"detail": "Informe se a chamada automática fica ligada."}, status=400)
+        vacancy.auto_call_waitlist = enabled
+        vacancy.save(update_fields=["auto_call_waitlist"])
+        return Response({"auto_call_waitlist": vacancy.auto_call_waitlist})
 
 
 class DecisionView(CandidateAreaView):

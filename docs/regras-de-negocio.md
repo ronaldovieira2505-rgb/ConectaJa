@@ -87,4 +87,4 @@ Somente dentro do app (sino com contador): aprovação ou recusa de candidatura,
 - **Cupom de desconto (US28):** removido por decisão do PO.
 - **Impulsionamento (US33–US36):** créditos comprados, como nos marketplaces tradicionais. A duração e o posicionamento ficam a cargo de um algoritmo interno [pós-MVP].
 - **Níveis e selo (US65/US66):** métricas a definir. Avaliações não são obrigatórias, mas contam para o status [pós-MVP].
-- **Lista de espera (US43):** chamada automática do próximo candidato [pós-MVP].
+- **Lista de espera (US43):** chamada automática do próximo candidato [pós-MVP]. Com a equipe completa, as candidaturas `PENDENTE` continuam válidas e formam a lista de espera, numerada por ordem de candidatura (empresa: "Lista de espera"; prestador: "Na lista de espera (posição N)"). Ao liberar uma posição por falta ou cancelamento do prestador, o primeiro elegível é aprovado pelo SISTEMA, sem prazo de aceite (como na aprovação manual); a empresa pode desligar a chamada por vaga (`auto_call_waitlist`, ligada por padrão).

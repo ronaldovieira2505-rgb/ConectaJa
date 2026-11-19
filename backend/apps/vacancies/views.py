@@ -108,6 +108,7 @@ def serialize_vacancy(vacancy):
         "status_label": vacancy.get_status_display(),
         "created_at": vacancy.created_at.isoformat(),
         "photo_url": photos.photo_url(vacancy),
+        "auto_call_waitlist": vacancy.auto_call_waitlist,
     }
 
 

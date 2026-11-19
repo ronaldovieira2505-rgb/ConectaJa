@@ -40,6 +40,7 @@ Estados finais: `FINALIZADA`, `CANCELADA`.
 |---|---|---|---|
 | — | Prestador se candidata | `PENDENTE` | Vaga `PUBLICADA` (ou reaberta por falta); prestador `APROVADO`, com chave PIX e sem suspensão; sem candidatura anterior na mesma vaga; sem outra alocação ativa em horário sobreposto |
 | `PENDENTE` | Empresa aprova | `APROVADA` | Há posição livre; agora < `starts_at` (ou vaga reaberta e agora < `ends_at`). Cria `Assignment` `CONFIRMADA`; notifica o prestador |
+| `PENDENTE` | SISTEMA: chamada automática da lista de espera (US43) | `APROVADA` | Uma posição foi liberada por falta (US55) ou cancelamento do prestador (US72) com a equipe completa, e "Chamar automaticamente da lista de espera" está ligado na vaga (padrão). Chama o primeiro pendente, por ordem de candidatura, que ainda for elegível (prestador aprovado, com PIX, sem suspensão e sem conflito de horário); quem não for elegível é pulado e continua `PENDENTE`. Ninguém é chamado se a vaga estiver `FINALIZADA`/`CANCELADA`, se faltar menos que *tolerância de falta (30 min)* para `ends_at` ou se a empresa cancelou a posição (US71). Cria `Assignment` `CONFIRMADA`, notifica o prestador ("Você foi chamado da lista de espera") e a empresa. Idempotente: a posição livre é recalculada com a vaga bloqueada |
 | `PENDENTE` | Empresa recusa | `RECUSADA` | Notifica o prestador |
 | `PENDENTE` | Prestador desiste | `DESISTENCIA` | Sem penalidade (ainda não havia compromisso) |
 | `PENDENTE` | SISTEMA: vaga `FINALIZADA` ou `CANCELADA` | `EXPIRADA` | — |

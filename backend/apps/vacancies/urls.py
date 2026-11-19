@@ -19,6 +19,11 @@ urlpatterns = [
         name="vacancy-candidates",
     ),
     path(
+        "vacancies/<int:pk>/waitlist-auto-call/",
+        candidate_views.VacancyWaitlistSettingView.as_view(),
+        name="vacancy-waitlist-auto-call",
+    ),
+    path(
         "applications/<int:pk>/approve/",
         candidate_views.ApplicationApproveView.as_view(),
         name="application-approve",

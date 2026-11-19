@@ -156,6 +156,8 @@ export interface Candidate {
   rating_count?: number
   recent_reviews?: CandidateReview[]
   applied_at: string
+  // Posição na lista de espera (US43); null enquanto a equipe não está completa.
+  waitlist_position?: number | null
 }
 
 /** Prestador alocado: contato liberado após a aprovação. */
@@ -171,6 +173,8 @@ export interface VacancyCandidates {
   positions: number
   filled_positions: number
   team_complete: boolean
+  // Chamada automática da lista de espera (US43); ligada por padrão.
+  auto_call_waitlist?: boolean
   free_cancel_minutes_before?: number
   no_show_window_days?: number
   candidates: Candidate[]
@@ -296,6 +300,8 @@ export interface JobItem {
   status: string
   status_label: string
   can_withdraw: boolean
+  // Candidatura pendente numa vaga com equipe completa (US43).
+  waitlist_position?: number | null
   // Só nas alocações (US50/US54).
   can_check_in?: boolean
   can_check_out?: boolean
