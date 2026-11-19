@@ -10,17 +10,14 @@ import {
   type MyJobs,
 } from '../api'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
+import VacancyCover from '../components/VacancyCover'
 
-const GROUPS: { key: JobGroupKey; title: string; empty: string }[] = [
-  { key: 'waiting', title: 'Aguardando', empty: 'Nenhuma candidatura aguardando resposta.' },
-  {
-    key: 'upcoming',
-    title: 'Aprovadas / Próximos turnos',
-    empty: 'Nenhum turno confirmado por enquanto.',
-  },
-  { key: 'in_progress', title: 'Em andamento', empty: 'Nenhum turno em andamento.' },
-  { key: 'completed', title: 'Concluídas', empty: 'Nenhum turno concluído ainda.' },
-  { key: 'closed', title: 'Encerradas', empty: 'Nenhuma candidatura encerrada.' },
+const GROUPS: { key: JobGroupKey; title: string }[] = [
+  { key: 'in_progress', title: 'Em andamento' },
+  { key: 'upcoming', title: 'Próximos turnos' },
+  { key: 'waiting', title: 'Aguardando' },
+  { key: 'completed', title: 'Concluídas' },
+  { key: 'closed', title: 'Encerradas' },
 ]
 
 function badgeTone(status: string): 'neutral' | 'success' | 'warning' | 'info' {
@@ -139,34 +136,56 @@ export default function MyJobsPage() {
     <>
       <h1>Meus trabalhos</h1>
       {actionError && <Alert tone="error">{actionError}</Alert>}
+      {GROUPS.every((group) => jobs.groups[group.key].length === 0) && (
+        <Card>
+          <div className="vazio">
+            <h2>Nenhum trabalho ainda</h2>
+            <p>Suas candidaturas e turnos aparecem aqui.</p>
+            <Link to="/vagas" className="btn btn-primary">
+              Buscar vagas
+            </Link>
+          </div>
+        </Card>
+      )}
       {GROUPS.map((group) => {
         const items = jobs.groups[group.key]
+        // Grupo vazio não ocupa a tela: só aparece o que tem algo para o prestador ver ou fazer.
+        if (items.length === 0) return null
         return (
           <section key={group.key} aria-labelledby={`grupo-${group.key}`}>
-            <h2 id={`grupo-${group.key}`}>{group.title}</h2>
-            {items.length === 0 && <p>{group.empty}</p>}
+            <h2 id={`grupo-${group.key}`}>
+              {group.title}{' '}
+              <span className="text-tinta-media" aria-hidden="true">
+                · {items.length}
+              </span>
+            </h2>
             {items.map((item) => (
               <Card key={`${item.kind}-${item.id}`}>
-                <h3>
-                  <Link to={`/vagas/${item.vacancy_id}`}>{item.title}</Link>
-                </h3>
-                <p className="marcadores">
-                  <Badge tone={badgeTone(item.status)}>{item.status === 'CONTESTADA' ? 'Horas contestadas' : item.status_label}</Badge>
-                </p>
-                <dl className="linhas">
-                  <div>
-                    <dt>Empresa</dt>
-                    <dd>{item.company_name}</dd>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                  <VacancyCover
+                    photoUrl={item.photo_url}
+                    category={item.category}
+                    className="size-16 shrink-0 rounded-2xl"
+                  />
+                  <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
+                    <h3 className="m-0 text-[17px] leading-6 tracking-normal">
+                      <Link to={`/vagas/${item.vacancy_id}`}>{item.title}</Link>
+                    </h3>
+                    <p className="m-0 text-[13px] leading-5 text-tinta-media">
+                      <span>{item.company_name}</span> ·{' '}
+                      {formatShift(item.starts_at, item.ends_at)}
+                    </p>
+                    <p className="marcadores m-0">
+                      <Badge tone={badgeTone(item.status)}>
+                        {item.status === 'CONTESTADA' ? 'Horas contestadas' : item.status_label}
+                      </Badge>
+                    </p>
                   </div>
-                  <div>
-                    <dt>Turno</dt>
-                    <dd>{formatShift(item.starts_at, item.ends_at)}</dd>
-                  </div>
-                  <div>
-                    <dt>Você recebe</dt>
-                    <dd>{brl(item.net_cents)}</dd>
-                  </div>
-                </dl>
+                  <p className="m-0 ml-auto flex shrink-0 flex-col items-end">
+                    <span className="text-[12px] leading-4 text-tinta-media">Você recebe</span>
+                    <span className="text-[20px] leading-7">{brl(item.net_cents)}</span>
+                  </p>
+                </div>
                 {item.kind === 'assignment' && (
                   <>
                     {item.status === 'CONFIRMADA' && item.can_check_in && (

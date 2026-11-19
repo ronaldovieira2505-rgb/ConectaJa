@@ -15,6 +15,7 @@ from apps.core.permissions import IsWorkerUser
 from apps.vacancies import application_services as applications
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies.models import Application, Assignment, Vacancy
+from apps.vacancies.photos import photo_url
 
 AS = Assignment.Status
 AP = Application.Status
@@ -84,6 +85,8 @@ def _item(kind, obj, vacancy, params):
         "id": obj.pk,
         "vacancy_id": vacancy.pk,
         "title": vacancy.title,
+        "category": vacancy.category,
+        "photo_url": photo_url(vacancy),
         "company_name": vacancy.company.trade_name or vacancy.company.legal_name,
         "starts_at": vacancy.starts_at.isoformat(),
         "ends_at": vacancy.ends_at.isoformat(),

@@ -4,14 +4,15 @@ import { homePathFor, useAuth } from './authContext'
 import Layout from './components/Layout'
 import { Loading } from './components/ui'
 import CompanyConfirmPresencePage from './pages/CompanyConfirmPresencePage'
+import CompanyProfilePage from './pages/CompanyProfilePage'
 import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
 import CompanyVacancyDetailPage from './pages/CompanyVacancyDetailPage'
 import CompanyVacancyNewPage from './pages/CompanyVacancyNewPage'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import MyJobsPage from './pages/MyJobsPage'
 import WorkerWalletPage from './pages/WorkerWalletPage'
-import Placeholder from './pages/Placeholder'
 import VacancyPublicDetailPage from './pages/VacancyPublicDetailPage'
 import VacancySearchPage from './pages/VacancySearchPage'
 import SignupChoicePage from './pages/SignupChoicePage'
@@ -32,7 +33,8 @@ function RequireRole({ role }: { role: Role }) {
 function Home() {
   const { user, loading } = useAuth()
   if (loading) return <Loading rows={1} />
-  return <Navigate to={user ? homePathFor(user.role) : '/login'} replace />
+  // Visitante vê a página inicial; quem já entrou vai direto para a área do seu papel.
+  return user ? <Navigate to={homePathFor(user.role)} replace /> : <LandingPage />
 }
 
 export default function AppRoutes() {
@@ -52,26 +54,13 @@ export default function AppRoutes() {
           <Route path="empresa/vagas/nova" element={<CompanyVacancyNewPage />} />
           <Route path="empresa/vagas/:id" element={<CompanyVacancyDetailPage />} />
           <Route path="empresa/confirmar-presenca" element={<CompanyConfirmPresencePage />} />
-          <Route
-            path="empresa/perfil"
-            element={
-              <Placeholder
-                title="Perfil da empresa"
-                issue="uma próxima issue"
-                next={{
-                  to: '/empresa/vagas',
-                  label: 'Ir para minhas vagas',
-                  hint: 'Os dados do cadastro já valem para publicar turnos e pagar em custódia.',
-                }}
-              />
-            }
-          />
+          <Route path="empresa/perfil" element={<CompanyProfilePage />} />
         </Route>
         <Route element={<RequireRole role="WORKER" />}>
           <Route path="prestador/vagas" element={<Navigate to="/vagas" replace />} />
           <Route path="meus-trabalhos" element={<MyJobsPage />} />
           <Route path="carteira" element={<WorkerWalletPage />} />
-          <Route path="prestador/perfil"element={<WorkerHomePage />} />
+          <Route path="prestador/perfil" element={<WorkerHomePage />} />
           <Route path="perfil/documentos" element={<WorkerDocumentsPage />} />
           <Route path="perfil/pix" element={<WorkerPixPage />} />
         </Route>

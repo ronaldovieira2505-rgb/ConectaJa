@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.core.validators import validate_cnpj
+from apps.workers.models import private_storage
 
 
 class Company(models.Model):
@@ -50,6 +51,9 @@ class Company(models.Model):
         help_text="A consulta de CNPJ falhou no cadastro: o admin deve conferir os dados.",
     )
     description = models.TextField("descrição", blank=True)
+    logo = models.FileField(
+        "logo", upload_to="company_logos/", storage=private_storage, blank=True
+    )
     created_at = models.DateTimeField("criada em", auto_now_add=True)
 
     class Meta:

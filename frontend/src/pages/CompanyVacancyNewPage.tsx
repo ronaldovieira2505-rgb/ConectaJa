@@ -31,6 +31,7 @@ export default function CompanyVacancyNewPage() {
   const [error, setError] = useState('')
   const [locating, setLocating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [photo, setPhoto] = useState<File | null>(null)
 
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [key]: e.target.value })
@@ -85,6 +86,14 @@ export default function CompanyVacancyNewPage() {
           positions,
         },
       })
+      if (photo) {
+        const upload = new FormData()
+        upload.append('photo', photo)
+        // A vaga já existe: se a foto falhar, a empresa envia de novo na página da vaga.
+        await api(`/api/vacancies/${vacancy.id}/photo/`, { method: 'POST', form: upload }).catch(
+          () => undefined,
+        )
+      }
       navigate(`/empresa/vagas/${vacancy.id}`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível criar a vaga.')
@@ -125,13 +134,20 @@ export default function CompanyVacancyNewPage() {
             <Field label="Latitude" value={form.latitude} onChange={set('latitude')} />
             <Field label="Longitude" value={form.longitude} onChange={set('longitude')} />
           </div>
-          <p className="sub">
-            As coordenadas definem o raio do check-in: o prestador só consegue bater o ponto perto
-            do local.
-          </p>
+          <p className="sub">As coordenadas definem onde o check-in é aceito.</p>
           <Button type="button" variant="secondary" onClick={useMyLocation} disabled={locating}>
             {locating ? 'Localizando...' : 'Usar minha localização'}
           </Button>
+        </fieldset>
+        <fieldset className="bloco">
+          <legend>Foto do local</legend>
+          <Field
+            label="Foto (opcional)"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+          />
+          <p className="sub">JPG, PNG ou WebP, até 5 MB. Aparece na busca e na página da vaga.</p>
         </fieldset>
         <fieldset className="bloco">
           <legend>Quando e quanto</legend>
@@ -146,9 +162,6 @@ export default function CompanyVacancyNewPage() {
         </fieldset>
         <p className="total" aria-live="polite">
           Total a pagar <strong>{brl(total)}</strong>
-        </p>
-        <p className="sub">
-          O valor fica retido em custódia na publicação e é liberado conforme a presença.
         </p>
         <Button type="submit" block busy={submitting}>
           Criar vaga

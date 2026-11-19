@@ -24,6 +24,7 @@ const card = {
   payment_guaranteed: true,
   urgent: true,
   distance_km: null,
+  photo_url: null,
 }
 
 const calls: string[] = []
@@ -69,12 +70,13 @@ function renderAt(path: string) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Buscar vagas (US12)', () => {
-  it('mostra o valor líquido em destaque, o bruto, a taxa e os selos', async () => {
+  it('mostra o cartão da vaga com o valor líquido em destaque e os selos', async () => {
     mockApi()
     renderAt('/vagas')
-    expect(await screen.findByText('Você recebe R$ 97,00')).toBeInTheDocument()
-    expect(screen.getByText(/Valor do turno R\$\s100,00 · taxa 3%/)).toBeInTheDocument()
-    expect(screen.getByText('Pagamento garantido')).toBeInTheDocument()
+    const link = await screen.findByRole('link', { name: 'Carga e descarga' })
+    expect(link).toHaveAttribute('href', '/vagas/7')
+    expect(link.closest('article')).toHaveTextContent(/Você recebe\s*R\$\s97,00/)
+    expect(screen.getByText('Mercado Bom')).toBeInTheDocument()
     expect(screen.getByText('Urgente')).toBeInTheDocument()
     expect(screen.getByText(/2 vagas restantes/)).toBeInTheDocument()
   })
@@ -82,7 +84,7 @@ describe('Buscar vagas (US12)', () => {
   it('combina busca e filtros na consulta e limpa com um clique', async () => {
     mockApi()
     renderAt('/vagas')
-    await screen.findByText('Você recebe R$ 97,00')
+    await screen.findByText(/R\$\s97,00/)
     const user = userEvent.setup()
     await user.type(screen.getByLabelText('Buscar'), 'carga')
     await user.selectOptions(screen.getByLabelText('Categoria'), 'LIMPEZA')
@@ -97,7 +99,7 @@ describe('Buscar vagas (US12)', () => {
   it('botão de filtros (celular) abre e fecha e mostra quantos estão ativos', async () => {
     mockApi()
     renderAt('/vagas')
-    await screen.findByText('Você recebe R$ 97,00')
+    await screen.findByText(/R\$\s97,00/)
     const user = userEvent.setup()
     const toggle = screen.getByRole('button', { name: 'Filtros' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')

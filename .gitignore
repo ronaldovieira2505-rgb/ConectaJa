@@ -59,6 +59,7 @@ cover/
 *.log
 local_settings.py
 db.sqlite3
+*.sqlite3
 db.sqlite3-journal
 
 # Flask stuff:
@@ -175,6 +176,7 @@ frontend/dist/
 
 # Django static
 backend/staticfiles/
+backend/frontend_dist/
 
 # Ruff stuff:
 .ruff_cache/
@@ -190,3 +192,5 @@ backend/staticfiles/
 .cursorindexingignore
 # Uploads privados (documentos e selfies), gerados localmente
 backend/private_media/
+# Segredos do deploy no Azure (gerados localmente, nunca commitar)
+azure-app-settings.local.json

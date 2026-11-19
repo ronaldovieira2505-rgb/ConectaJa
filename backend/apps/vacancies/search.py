@@ -13,6 +13,7 @@ from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies.application_services import has_overlap
 from apps.vacancies.models import Application, Assignment, Vacancy
+from apps.vacancies.photos import photo_url
 from apps.workers.models import Worker
 from integrations.geo import haversine_distance_m
 
@@ -156,6 +157,7 @@ def serialize_card(vacancy, distance_m=None, params=None):
         "payment_guaranteed": True,  # só aparece na busca vaga paga em custódia
         "urgent": vacancy.reopened,
         "distance_km": None if distance_m is None else round(distance_m / 1000, 1),
+        "photo_url": photo_url(vacancy),
     }
 
 
