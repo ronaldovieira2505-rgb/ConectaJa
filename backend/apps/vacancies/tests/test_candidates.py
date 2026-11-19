@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.core.models import Notification
+from apps.core.models import Notification, StateTransition
 from apps.core.tests.factories import (
     make_assignment,
     make_company,
@@ -15,7 +15,7 @@ from apps.core.tests.factories import (
     make_worker,
 )
 from apps.vacancies import application_services as applications
-from apps.vacancies.models import Application, Assignment
+from apps.vacancies.models import Application, Assignment, Review
 from apps.workers.models import WorkerDocument
 
 pytestmark = pytest.mark.django_db
@@ -175,3 +175,114 @@ def test_photo_is_served_to_vacancy_company():
     response = company_client(vacancy.company).get(f"/api/applications/{application.pk}/photo/")
     assert response.status_code == 200
     assert b"".join(response.streaming_content) == b"png-bytes"
+
+
+# --- US40: avaliação do candidato -------------------------------------------------------------
+
+
+def review_for(
+    worker, *, rating, comment="", company=None, created_at=None, status="PAGA", starts_in_hours=500
+):
+    """Alocação do prestador em vaga de `company` (ou de uma nova empresa) com avaliação."""
+    company = company or make_company()
+    vacancy = make_published_vacancy(now=now(), company=company, starts_in_hours=starts_in_hours)
+    assignment = make_assignment(vacancy=vacancy, worker=worker, now=now())
+    Assignment.objects.filter(pk=assignment.pk).update(status=status)
+    return Review.objects.create(
+        assignment=assignment,
+        direction=Review.Direction.COMPANY_TO_WORKER,
+        author=company.members.first().user,
+        rating=rating,
+        comment=comment,
+        created_at=created_at or now(),
+    )
+
+
+def candidate_payload(vacancy):
+    response = company_client(vacancy.company).get(f"/api/vacancies/{vacancy.pk}/candidates/")
+    assert response.status_code == 200
+    return response.json()["candidates"]
+
+
+def test_candidate_without_reviews_is_new_on_platform():
+    vacancy, _, _ = setup()
+    (candidate,) = candidate_payload(vacancy)
+    assert candidate["rating_avg"] is None
+    assert candidate["rating_count"] == 0
+    assert candidate["recent_reviews"] == []
+    assert candidate["no_shows_30d"] == 0
+
+
+def test_candidate_shows_average_count_and_three_most_recent_reviews():
+    vacancy, worker, _ = setup()
+    base = now()
+    ratings = [5, 5, 5, 5, 4]
+    for i, rating in enumerate(ratings):
+        review_for(
+            worker,
+            rating=rating,
+            comment=f"comentario {i}",
+            created_at=base - timedelta(days=10 - i),
+            starts_in_hours=500 + i * 24,
+        )
+    (candidate,) = candidate_payload(vacancy)
+    assert candidate["rating_avg"] == 4.8
+    assert candidate["rating_count"] == 5
+    recent = candidate["recent_reviews"]
+    assert [r["comment"] for r in recent] == ["comentario 4", "comentario 3", "comentario 2"]
+    assert recent[0]["rating"] == 4
+    assert recent[0]["created_at"]
+
+
+def test_recent_reviews_show_trade_name_without_sensitive_data():
+    vacancy, worker, _ = setup()
+    other = make_company()
+    other.trade_name = "Padaria do Zé"
+    other.save(update_fields=["trade_name"])
+    review_for(worker, rating=5, comment="Ótimo", company=other)
+    (candidate,) = candidate_payload(vacancy)
+    (review,) = candidate["recent_reviews"]
+    assert review["company_name"] == "Padaria do Zé"
+    body = str(candidate)
+    assert "pay_per_person" not in body and "10000" not in body
+    assert "latitude" not in body and "address" not in body
+    assert set(review) == {"rating", "comment", "created_at", "company_name"}
+
+
+def test_candidate_ignores_reviews_written_by_workers():
+    vacancy, worker, _ = setup()
+    review = review_for(worker, rating=5)
+    Review.objects.create(
+        assignment=review.assignment,
+        direction=Review.Direction.WORKER_TO_COMPANY,
+        author=worker.user,
+        rating=1,
+    )
+    (candidate,) = candidate_payload(vacancy)
+    assert candidate["rating_count"] == 1
+    assert candidate["rating_avg"] == 5.0
+
+
+def test_candidate_counts_recent_no_shows_only_within_window():
+    vacancy, worker, _ = setup()
+    recent = make_assignment(worker=worker, now=now(), starts_in_hours=200)
+    old = make_assignment(worker=worker, now=now(), starts_in_hours=300)
+    for assignment, days in ((recent, 5), (old, 45)):
+        StateTransition.objects.create(
+            entity_type="Assignment",
+            entity_id=assignment.pk,
+            from_state="CONFIRMADA",
+            to_state="FALTA",
+            created_at=now() - timedelta(days=days),
+        )
+    (candidate,) = candidate_payload(vacancy)
+    assert candidate["no_shows_30d"] == 1
+
+
+def test_candidates_keep_application_order():
+    vacancy, first_worker, _ = setup(positions=2)
+    second_worker = make_worker()
+    applications.apply_to_vacancy(vacancy, second_worker, now=now() + timedelta(minutes=1))
+    review_for(second_worker, rating=5)
+    names = [c["name"] for c in candidate_payload(vacancy)]
+    assert names == [first_worker.full_name.split()[0], second_worker.full_name.split()[0]]

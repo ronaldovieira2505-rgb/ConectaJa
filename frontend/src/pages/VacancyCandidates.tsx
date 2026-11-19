@@ -1,7 +1,49 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, ApiError, formatDateTime, type VacancyCandidates } from '../api'
+import { api, ApiError, formatDateTime, type Candidate, type VacancyCandidates } from '../api'
 import CancelReasonForm from '../components/CancelReasonForm'
 import { Alert, Badge, Button } from '../components/ui'
+
+function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+}
+
+/** Nota média e avaliações recentes do candidato (US40). A nota só informa; não aprova nem ordena. */
+function CandidateRating({ candidate }: { candidate: Candidate }) {
+  const [open, setOpen] = useState(false)
+  const count = candidate.rating_count ?? 0
+  const reviews = candidate.recent_reviews ?? []
+  if (count === 0 || candidate.rating_avg == null) return <p>Novo na plataforma</p>
+  const average = candidate.rating_avg.toLocaleString('pt-BR', { minimumFractionDigits: 1 })
+  return (
+    <div>
+      <p>
+        ★ {average} · {count} {count === 1 ? 'turno avaliado' : 'turnos avaliados'}
+      </p>
+      {reviews.length > 0 && (
+        <>
+          <Button
+            variant="secondary"
+            aria-expanded={open}
+            aria-label={`${open ? 'Ocultar' : 'Ver'} avaliações de ${candidate.name}`}
+            onClick={() => setOpen(!open)}
+          >
+            {open ? 'Ocultar avaliações' : 'Ver avaliações'}
+          </Button>
+          {open && (
+            <ul aria-label={`Avaliações de ${candidate.name}`}>
+              {reviews.map((r, i) => (
+                <li key={i}>
+                  <strong>★ {r.rating}</strong> · {formatDay(r.created_at)} · {r.company_name}
+                  {r.comment && <p>{r.comment}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
 
 /** Seção "Candidatos" do detalhe da vaga: aprovar, recusar e ver a equipe (US42). */
 export default function VacancyCandidatesSection({
@@ -68,8 +110,11 @@ export default function VacancyCandidatesSection({
             {c.photo_url && <img src={c.photo_url} alt={`Foto de ${c.name}`} width={48} height={48} />}
             <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}
             <p>
-              {c.completed_shifts} turnos concluídos · candidatou-se em {formatDateTime(c.applied_at)}
+              {c.completed_shifts} turnos concluídos · {c.no_shows_30d ?? 0}{' '}
+              {(c.no_shows_30d ?? 0) === 1 ? 'falta' : 'faltas'} nos últimos{' '}
+              {data.no_show_window_days ?? 30} dias · candidatou-se em {formatDateTime(c.applied_at)}
             </p>
+            <CandidateRating candidate={c} />
             <div className="acoes">
               <Button disabled={data.team_complete} onClick={() => decide(c.id, 'approve')}>
                 {data.team_complete ? 'Equipe completa' : 'Aprovar'}
