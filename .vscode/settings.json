@@ -1,0 +1,12 @@
+{
+  "appService.deploySubpath": "backend",
+  "appService.zipIgnorePattern": [
+    "db.sqlite3",
+    "private_media{,/**}",
+    "staticfiles{,/**}",
+    "__pycache__{,/**}",
+    "**/__pycache__{,/**}",
+    ".pytest_cache{,/**}",
+    ".ruff_cache{,/**}"
+  ]
+}

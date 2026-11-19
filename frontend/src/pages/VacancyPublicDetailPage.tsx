@@ -127,7 +127,7 @@ export default function VacancyPublicDetailPage() {
         </Alert>
       )}
       {applyError && <Alert tone="error">{applyError}</Alert>}
-      {vacancy.apply_blocker && !applyError && <Alert>{vacancy.apply_blocker}</Alert>}
+      {vacancy.apply_blocker && !applyError && !sent && <Alert>{vacancy.apply_blocker}</Alert>}
       <details className="ver-mais">
         <summary>Ver mais sobre a vaga</summary>
         <h2>O serviço</h2>

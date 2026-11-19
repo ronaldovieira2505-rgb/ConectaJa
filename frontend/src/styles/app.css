@@ -314,6 +314,29 @@ summary {
   margin-left: auto;
 }
 
+/* Logado, o menu ocupa a esquerda: a marca entra na fila do cabeçalho, antes do menu,
+   em vez de flutuar no centro por cima dos botões. */
+.app-brand.app-brand-logado {
+  position: static;
+  flex-shrink: 0;
+  transform: none;
+}
+
+.rotulo-curto {
+  display: none;
+}
+
+/* Tablet e notebook pequeno: rótulos curtos para o menu não empurrar o sino e o "Sair". */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .rotulo-longo {
+    display: none;
+  }
+
+  .rotulo-curto {
+    display: inline;
+  }
+}
+
 /* No celular a marca vai para a esquerda e o menu vira uma barra flutuante no rodapé. */
 @media (max-width: 767px) {
   .app-brand {
@@ -356,6 +379,15 @@ summary {
 
   .app-nav-icone {
     display: none;
+  }
+
+  /* Rótulos curtos para os quatro itens caberem na barra sem cortar. */
+  .rotulo-longo {
+    display: none;
+  }
+
+  .rotulo-curto {
+    display: inline;
   }
 
   .app-header-actions .btn-ghost,

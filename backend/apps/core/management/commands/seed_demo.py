@@ -1,9 +1,11 @@
 """Dados de demonstração (BASE-03). Idempotente: rodar de novo não duplica nada."""
 
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -12,12 +14,13 @@ from apps.accounts.models import Role
 from apps.companies.models import Company, CompanyMember
 from apps.companies.services import review_company
 from apps.companies.state_machine import COMPANY_VERIFICATION_MACHINE
+from apps.core.demo_history import build_current_state, build_history
 from apps.core.models import PlatformParameters, PlatformParametersChange
 from apps.core.state_machine import record_creation
 from apps.vacancies import application_services as applications
 from apps.vacancies import services as vacancies
 from apps.vacancies.models import Vacancy
-from apps.workers.models import Worker
+from apps.workers.models import Worker, WorkerDocument
 from apps.workers.services import review_worker
 from apps.workers.state_machine import WORKER_VERIFICATION_MACHINE
 
@@ -35,52 +38,169 @@ SHORT_DEADLINES = {
     "auto_checkout_minutes_after_end": 2,
 }
 
-ADMIN = {"email": f"admin@{EMAIL_DOMAIN}", "name": "Administrador Demo"}
+ADMIN = {"email": f"admin@{EMAIL_DOMAIN}", "name": "Equipe Conecta Já"}
 
-# Empresas aprovadas, empresa pendente e prestadores. Documentos são gerados (nada real).
+# Empresas e prestadores fictícios (CPFs e CNPJs válidos gerados; e-mails @exemplo.com).
+# "since" = há quantos dias a conta existe, para o perfil não mostrar tudo criado hoje.
 COMPANIES = [
     {
         "base": "11222333",
-        "legal_name": "Armazéns Paulista Demo LTDA",
+        "legal_name": "Armazéns Paulista Logística LTDA",
         "trade_name": "Armazéns Paulista",
         "owner": "Marina Souza",
         "email": f"empresa1@{EMAIL_DOMAIN}",
         "approved": True,
+        "tax_regime": "NORMAL",
+        "street": "Avenida Mofarrej", "number": "1200", "district": "Vila Leopoldina",
+        "zip_code": "05311000", "phone": "1131234500",
+        "description": "Operador logístico com centro de distribuição na Vila Leopoldina. "
+        "Atendemos varejo e e-commerce e reforçamos a equipe em picos de recebimento, "
+        "inventário e campanhas de vendas.",
+        "logo": "logo-armazens-paulista.png",
+        "since": 75,
     },
     {
         "base": "22333444",
-        "legal_name": "Eventos Centro Demo LTDA",
+        "legal_name": "Eventos Centro Produções LTDA",
         "trade_name": "Eventos Centro",
         "owner": "Carlos Lima",
         "email": f"empresa2@{EMAIL_DOMAIN}",
         "approved": True,
+        "tax_regime": "SIMPLES",
+        "street": "Rua Funchal", "number": "500", "district": "Vila Olímpia",
+        "zip_code": "04551060", "phone": "1132345600",
+        "description": "Produtora de eventos corporativos, feiras e lançamentos em São Paulo. "
+        "Contratamos equipe de salão, recepção, montagem e fotografia por evento.",
+        "logo": "logo-eventos-centro.png",
+        "since": 70,
     },
     {
         "base": "33444555",
-        "legal_name": "Mercado Novo Demo LTDA",
+        "legal_name": "Mercado Novo Comércio de Alimentos LTDA",
         "trade_name": "Mercado Novo",
         "owner": "Paula Dias",
         "email": f"empresa.pendente@{EMAIL_DOMAIN}",
         "approved": False,
+        "tax_regime": "SIMPLES",
+        "street": "Rua Voluntários da Pátria", "number": "1650", "district": "Santana",
+        "zip_code": "02011100", "phone": "1133456700",
+        "description": "Mercado de bairro em Santana, aberto todos os dias.",
+        "logo": "logo-mercado-novo.png",
+        "since": 1,
     },
-    # Aprovadas a mais, só para o catálogo de anúncios de exemplo não vir de 2 empresas.
     {
         "base": "44555666",
-        "legal_name": "Construtora Horizonte Demo LTDA",
+        "legal_name": "Construtora Horizonte LTDA",
         "trade_name": "Horizonte Obras",
         "owner": "Carlos Mendes",
         "email": f"empresa3@{EMAIL_DOMAIN}",
         "approved": True,
+        "tax_regime": "NORMAL",
+        "street": "Rua Cardeal Arcoverde", "number": "1500", "district": "Pinheiros",
+        "zip_code": "05407002", "phone": "1134567800",
+        "description": "Construtora de reformas residenciais e comerciais. Chamamos "
+        "ajudantes, pintores e equipe de limpeza pós-obra conforme o cronograma de cada obra.",
+        "logo": "logo-horizonte-obras.png",
+        "since": 80,
     },
     {
         "base": "55666777",
-        "legal_name": "Supermercado Bom Preço Demo LTDA",
+        "legal_name": "Supermercado Bom Preço LTDA",
         "trade_name": "Bom Preço",
         "owner": "Juliana Rocha",
         "email": f"empresa4@{EMAIL_DOMAIN}",
         "approved": True,
+        "tax_regime": "SIMPLES",
+        "street": "Rua da Mooca", "number": "2500", "district": "Mooca",
+        "zip_code": "03104002", "phone": "1135678900",
+        "description": "Rede de supermercados de bairro na Zona Leste. Reforçamos reposição "
+        "e caixas em inventários, feirões e fins de semana de promoção.",
+        "logo": "logo-bom-preco.png",
+        "since": 65,
     },
 ]
+
+WORKERS = [
+    {
+        "base": "111222333",
+        "name": "Ana Paula Ribeiro",
+        "email": f"prestador1@{EMAIL_DOMAIN}",
+        "lat": "-23.550520",
+        "lng": "-46.633308",  # Praça da Sé
+        "pix": ("EMAIL", f"prestador1@{EMAIL_DOMAIN}"),
+        "approved": True,
+        "birth": (1994, 3, 12), "phone": "11987650001", "since": 60,
+    },
+    {
+        "base": "222333444",
+        "name": "Bruno Henrique Costa",
+        "email": f"prestador2@{EMAIL_DOMAIN}",
+        "lat": "-23.561414",
+        "lng": "-46.655881",  # Avenida Paulista (MASP)
+        "pix": ("ALEATORIA", "7c9e6679-7425-40de-944b-e07fc1f90ae7"),
+        "approved": True,
+        "birth": (1998, 8, 27), "phone": "11987650002", "since": 55,
+    },
+    {
+        "base": "333444555",
+        "name": "Carla Mendes Oliveira",
+        "email": f"prestador3@{EMAIL_DOMAIN}",
+        "lat": "-23.587416",
+        "lng": "-46.657634",  # Parque Ibirapuera
+        "pix": ("TELEFONE", "+5511999990003"),
+        "approved": True,
+        "birth": (1991, 11, 5), "phone": "11987650003", "since": 50,
+    },
+    {
+        "base": "444555666",
+        "name": "Diego Ramos Teixeira",
+        "email": f"prestador.pendente@{EMAIL_DOMAIN}",
+        "lat": "-23.534000",
+        "lng": "-46.634000",
+        "pix": ("ALEATORIA", "0b8f3c1e-52d4-4a77-9a3e-1d2c4b5a6f70"),
+        "approved": False,
+        "birth": (2001, 1, 19), "phone": "11987650004", "since": 1,
+    },
+    {
+        "base": "555666777",
+        "name": "Juliana Ferreira Lima",
+        "email": f"prestador4@{EMAIL_DOMAIN}",
+        "lat": "-23.541000",
+        "lng": "-46.574600",  # Tatuapé
+        "pix": ("EMAIL", f"prestador4@{EMAIL_DOMAIN}"),
+        "approved": True,
+        "birth": (1996, 6, 2), "phone": "11987650005", "since": 58,
+    },
+    {
+        "base": "666777888",
+        "name": "Marcos Vinícius Andrade",
+        "email": f"prestador5@{EMAIL_DOMAIN}",
+        "lat": "-23.565200",
+        "lng": "-46.684100",  # Pinheiros
+        "pix": ("TELEFONE", "+5511999990006"),
+        "approved": True,
+        "birth": (1989, 9, 14), "phone": "11987650006", "since": 62,
+    },
+    {
+        "base": "777888999",
+        "name": "Luana Martins Pereira",
+        "email": f"prestador6@{EMAIL_DOMAIN}",
+        "lat": "-23.555900",
+        "lng": "-46.598700",  # Mooca
+        "pix": ("ALEATORIA", "3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90"),
+        "approved": True,
+        "birth": (1999, 4, 23), "phone": "11987650007", "since": 57,
+    },
+]
+
+DEMO_ASSETS = Path(__file__).resolve().parents[2] / "demo_assets"
+
+# PNG mínimo válido, caso alguma imagem de exemplo esteja faltando.
+TINY_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00"
+    b"\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00"
+    b"\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 LOCAL_TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -182,44 +302,6 @@ CATALOGO = [
     }),
 ]
 
-WORKERS = [
-    {
-        "base": "111222333",
-        "name": "Ana Prestadora Demo",
-        "email": f"prestador1@{EMAIL_DOMAIN}",
-        "lat": "-23.550520",
-        "lng": "-46.633308",  # Praça da Sé
-        "pix": ("EMAIL", f"prestador1@{EMAIL_DOMAIN}"),
-        "approved": True,
-    },
-    {
-        "base": "222333444",
-        "name": "Bruno Prestador Demo",
-        "email": f"prestador2@{EMAIL_DOMAIN}",
-        "lat": "-23.561414",
-        "lng": "-46.655881",  # Avenida Paulista (MASP)
-        "pix": ("ALEATORIA", "7c9e6679-7425-40de-944b-e07fc1f90ae7"),
-        "approved": True,
-    },
-    {
-        "base": "333444555",
-        "name": "Carla Prestadora Demo",
-        "email": f"prestador3@{EMAIL_DOMAIN}",
-        "lat": "-23.587416",
-        "lng": "-46.657634",  # Parque Ibirapuera
-        "pix": ("TELEFONE", "+5511999990003"),
-        "approved": True,
-    },
-    {
-        "base": "444555666",
-        "name": "Diego Prestador Demo",
-        "email": f"prestador.pendente@{EMAIL_DOMAIN}",
-        "lat": "-23.534000",
-        "lng": "-46.634000",
-        "pix": ("ALEATORIA", "0b8f3c1e-52d4-4a77-9a3e-1d2c4b5a6f70"),
-        "approved": False,
-    },
-]
 
 
 def _check_digit(digits, weights):
@@ -262,6 +344,9 @@ class Command(BaseCommand):
             self._short_deadlines(admin)
         self._vacancies(companies, workers, admin, now)
         self._catalogo(companies, now)
+        by_key = {spec["email"].split("@")[0]: w for spec, w in zip(WORKERS, workers, strict=True)}
+        build_history(companies, by_key, admin, now)
+        build_current_state(companies, by_key, now)
         self._print_credentials(options["prazos_curtos"])
 
     def _admin(self):
@@ -284,17 +369,29 @@ class Command(BaseCommand):
             cnpj=cnpj,
             legal_name=spec["legal_name"],
             trade_name=spec["trade_name"],
-            tax_regime=Company.TaxRegime.SIMPLES,
+            tax_regime=spec["tax_regime"],
             registration_status="ATIVA",
+            street=spec["street"],
+            number=spec["number"],
+            district=spec["district"],
+            zip_code=spec["zip_code"],
+            phone=spec["phone"],
+            description=spec["description"],
             city="São Paulo",
             state="SP",
         )
+        logo = DEMO_ASSETS / spec["logo"]
+        if logo.exists():
+            company.logo.save(spec["logo"], ContentFile(logo.read_bytes()), save=True)
         CompanyMember.objects.create(
             user=user, company=company, role=CompanyMember.MemberRole.OWNER
         )
         record_creation(company, COMPANY_VERIFICATION_MACHINE, actor=user, reason="Cadastro demo")
         if spec["approved"]:
             review_company(company, reviewer=admin, approve=True, reason="Dados de demonstração")
+        since = timezone.now() - timedelta(days=spec["since"])
+        Company.objects.filter(pk=company.pk).update(created_at=since)
+        User.objects.filter(pk=user.pk).update(date_joined=since)
         return company
 
     def _worker(self, spec, admin):
@@ -310,7 +407,8 @@ class Command(BaseCommand):
             user=user,
             full_name=spec["name"],
             cpf=cpf,
-            birth_date=date(1995, 5, 20),
+            phone=spec["phone"],
+            birth_date=date(*spec["birth"]),
             verification_status=Worker.VerificationStatus.IN_REVIEW,
             pix_key_type=pix_type,
             pix_key=pix_key,
@@ -320,8 +418,23 @@ class Command(BaseCommand):
         record_creation(
             worker, WORKER_VERIFICATION_MACHINE, actor=user, reason="Cadastro demo"
         )
+        key = spec["email"].split("@")[0]
+        images = {
+            WorkerDocument.Kind.FRONT: DEMO_ASSETS / "doc-frente.png",
+            WorkerDocument.Kind.BACK: DEMO_ASSETS / "doc-verso.png",
+            # A selfie vira a foto do perfil: um avatar com as iniciais, sem rosto real.
+            WorkerDocument.Kind.SELFIE: DEMO_ASSETS / f"avatar-{key}.png",
+        }
+        for kind, image in images.items():
+            content = image.read_bytes() if image.exists() else TINY_PNG
+            document = WorkerDocument(worker=worker, kind=kind)
+            document.file.save(f"{kind.lower()}.png", ContentFile(content), save=True)
         if spec["approved"]:
             review_worker(worker, reviewer=admin, approve=True, reason="Dados de demonstração")
+        since = timezone.now() - timedelta(days=spec["since"])
+        Worker.objects.filter(pk=worker.pk).update(created_at=since)
+        User.objects.filter(pk=user.pk).update(date_joined=since)
+        WorkerDocument.objects.filter(worker=worker).update(uploaded_at=since)
         return worker
 
     def _short_deadlines(self, admin):
@@ -363,8 +476,12 @@ class Command(BaseCommand):
             4,
             now,
             category="CARGA_DESCARGA",
-            description="Descarregar um caminhão de caixas leves.",
+            description="Descarga de um caminhão de caixas leves (até 15 kg) e organização no "
+            "estoque da loja. Carrinho de carga disponível.",
             street="Praça da Sé",
+            number="111",
+            district="Sé",
+            zip_code="01001001",
             city="São Paulo",
             state="SP",
             latitude="-23.550520",
@@ -383,8 +500,12 @@ class Command(BaseCommand):
             6,
             now,
             category="EVENTOS",
-            description="Montar estrutura de palco e cadeiras.",
+            description="Montagem de palco, tendas e 300 cadeiras para evento ao ar livre. "
+            "Luvas fornecidas; usar calçado fechado.",
             street="Avenida Paulista",
+            number="1578",
+            district="Bela Vista",
+            zip_code="01310200",
             city="São Paulo",
             state="SP",
             latitude="-23.561414",
@@ -403,7 +524,12 @@ class Command(BaseCommand):
             5,
             now,
             category="LIMPEZA",
-            description="Limpeza geral após reforma.",
+            description="Limpeza geral de apartamento após reforma: janelas, rodapés e piso. "
+            "Produtos e equipamentos fornecidos.",
+            street="Rua Manuel da Nóbrega",
+            number="1300",
+            district="Paraíso",
+            zip_code="04001005",
             city="São Paulo",
             state="SP",
             latitude="-23.587416",
@@ -424,7 +550,12 @@ class Command(BaseCommand):
             4,
             now,
             category="VAREJO",
-            description="Repor prateleiras e organizar o estoque.",
+            description="Reposição de prateleiras e organização do estoque de uma banca de "
+            "frios e laticínios.",
+            street="Rua da Cantareira",
+            number="306",
+            district="Centro",
+            zip_code="01024000",
             city="São Paulo",
             state="SP",
             latitude="-23.541500",
