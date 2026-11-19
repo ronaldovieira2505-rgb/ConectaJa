@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Search,
+  Star,
   UserRound,
   Wallet,
   type LucideIcon,
@@ -19,6 +20,7 @@ const MENU: Record<Role, { to: string; label: string; icon: LucideIcon }[]> = {
   COMPANY: [
     { to: '/empresa/vagas', label: 'Minhas vagas', icon: ClipboardList },
     { to: '/empresa/confirmar-presenca', label: 'Confirmar presença', icon: ClipboardCheck },
+    { to: '/empresa/avaliacoes', label: 'Avaliações', icon: Star },
     { to: '/empresa/perfil', label: 'Perfil da empresa', icon: Building2 },
   ],
   WORKER: [

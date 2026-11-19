@@ -190,6 +190,38 @@ export interface VacancyCard {
   urgent: boolean
   distance_km: number | null
   photo_url: string | null
+  // Média das avaliações da empresa (US64); `average` é null sem avaliações.
+  company_rating?: CompanyRating
+}
+
+export interface CompanyRating {
+  average: number | null
+  count: number
+}
+
+/** Avaliação recebida pela empresa, com o prestador abreviado ("Ana S.") (US64). */
+export interface CompanyReview {
+  id: number
+  rating: number
+  comment: string
+  created_at: string
+  vacancy_title: string
+  reviewer: string
+}
+
+export interface CompanyReviews {
+  summary: CompanyRating
+  results: CompanyReview[]
+}
+
+/** Texto da nota da empresa: "★ 4,6 · 12 avaliações" ou "Sem avaliações ainda" (US64). */
+export function ratingLabel(rating?: CompanyRating): string {
+  if (!rating || rating.average === null || rating.count === 0) return 'Sem avaliações ainda'
+  const average = rating.average.toLocaleString('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+  return `★ ${average} · ${rating.count} ${rating.count === 1 ? 'avaliação' : 'avaliações'}`
 }
 
 /** Regras da plataforma vindas de `PlatformParameters` (US16): minutos, metros, dias e contagens. */
@@ -265,6 +297,10 @@ export interface JobItem {
   check_out_auto?: boolean
   // Motivo informado pela empresa quando as horas foram contestadas (US57).
   contest_reason?: string
+  // Avaliação da empresa pelo prestador (US64).
+  can_review?: boolean
+  review_deadline?: string | null
+  my_review?: { rating: number; comment: string } | null
 }
 
 export type JobGroupKey = 'waiting' | 'upcoming' | 'in_progress' | 'completed' | 'closed'

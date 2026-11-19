@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import { Loading } from './components/ui'
 import CompanyConfirmPresencePage from './pages/CompanyConfirmPresencePage'
 import CompanyProfilePage from './pages/CompanyProfilePage'
+import CompanyReviewsPage from './pages/CompanyReviewsPage'
 import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
 import CompanyVacancyDetailPage from './pages/CompanyVacancyDetailPage'
@@ -55,6 +56,7 @@ export default function AppRoutes() {
           <Route path="empresa/vagas/:id" element={<CompanyVacancyDetailPage />} />
           <Route path="empresa/confirmar-presenca" element={<CompanyConfirmPresencePage />} />
           <Route path="empresa/perfil" element={<CompanyProfilePage />} />
+          <Route path="empresa/avaliacoes" element={<CompanyReviewsPage />} />
         </Route>
         <Route element={<RequireRole role="WORKER" />}>
           <Route path="prestador/vagas" element={<Navigate to="/vagas" replace />} />

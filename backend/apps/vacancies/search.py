@@ -14,11 +14,13 @@ from apps.core.models import PlatformParameters
 from apps.vacancies.application_services import has_overlap
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.photos import photo_url
+from apps.vacancies.review_services import company_rating
 from apps.workers.models import Worker
 from integrations.geo import haversine_distance_m
 
 LOCAL_TZ = ZoneInfo("America/Sao_Paulo")
 V = Vacancy.Status
+NO_RATING = {"average": None, "count": 0}
 
 
 def normalize(text):
@@ -132,12 +134,16 @@ def search(params, now=None):
     return results
 
 
-def serialize_card(vacancy, distance_m=None, params=None):
+def serialize_card(vacancy, distance_m=None, params=None, ratings=None):
     params = params or PlatformParameters.get()
     gross = vacancy.pay_per_person_cents
     filled = getattr(vacancy, "filled", None)
     if filled is None:
         filled = vacancy.unavailable_positions
+    if ratings is None:
+        rating = company_rating(vacancy.company_id)
+    else:
+        rating = ratings.get(vacancy.company_id, NO_RATING)
     return {
         "id": vacancy.pk,
         "title": vacancy.title,
@@ -158,6 +164,7 @@ def serialize_card(vacancy, distance_m=None, params=None):
         "urgent": vacancy.reopened,
         "distance_km": None if distance_m is None else round(distance_m / 1000, 1),
         "photo_url": photo_url(vacancy),
+        "company_rating": rating,
     }
 
 

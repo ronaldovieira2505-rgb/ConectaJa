@@ -1,6 +1,6 @@
 import { CalendarClock, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { brl, formatShift, type VacancyCard } from '../api'
+import { brl, formatShift, ratingLabel, type VacancyCard } from '../api'
 import VacancyCover from './VacancyCover'
 
 const META = 'flex items-center gap-2 text-[13px] leading-5 text-tinta-media'
@@ -45,6 +45,9 @@ export default function VacancyTile({
             </Link>
           </Heading>
           <p className="m-0 text-[13px] leading-5 text-tinta-media">{vacancy.company_name}</p>
+          <p className="m-0 text-[12px] leading-4 text-tinta-media">
+            {ratingLabel(vacancy.company_rating)}
+          </p>
         </div>
         <div className="flex flex-col gap-1.5">
           <p className={`m-0 ${META}`}>

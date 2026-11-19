@@ -29,7 +29,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `suspension_days` | 15 | Duração da suspensão automática |
 | `free_cancel_minutes_before` | 1440 (24 h) | Prazo mínimo (X min antes do início) para a empresa cancelar pelo app (US71); também é o limite sem penalidade do prestador [pós-MVP: US72] |
 | `late_cancel_block_days` | 7 | Bloqueio por cancelamento tardio [pós-MVP] |
-| `review_window_days` | 7 | Prazo, em dias após a aprovação das horas, para a empresa avaliar o prestador (US63); deve ser maior que zero |
+| `review_window_days` | 7 | Prazo, em dias após a aprovação das horas, para a empresa avaliar o prestador (US63) e o prestador avaliar a empresa (US64); deve ser maior que zero |
 | `worker_fee_percent` | 3 | Taxa retida do prestador |
 
 **Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
@@ -69,6 +69,8 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 - **Liberação:** prestador recebe 97% e a plataforma retém 3% (lançamentos no livro-razão).
 
 **Avaliação do prestador (US63, decisões do PO):** com a alocação `APROVADA` ou `PAGA`, a empresa dona da vaga envia nota de 1 a 5 e comentário opcional de até 500 caracteres (`POST /api/assignments/<id>/review/`). A avaliação fica ligada à alocação, é **definitiva** (sem nova avaliação nem edição) e o prestador é notificado, vendo a nota assim que ela é enviada. O prazo é `review_window_days` (padrão 7 dias) contados da aprovação das horas (`validated_at`); depois disso a API recusa. Alocações em `FALTA`, `CANCELADA_*` ou `ESTORNADA` não são avaliáveis. Avaliar é opcional e nunca bloqueia pagamento nem o fluxo. Média e exibição para outras empresas (US40), níveis e selos (US65/US66) e moderação de comentários ficam fora.
+
+**Avaliação da empresa (US64):** com a alocação `APROVADA` ou `PAGA`, o prestador envia nota de 1 a 5 e comentário opcional de até 500 caracteres (`POST /api/assignments/<id>/review-company/`, botão "Avaliar empresa" em "Meus trabalhos"). Valem as **mesmas regras da US63**: uma avaliação por alocação e por sentido (a da empresa e a do prestador são independentes), sem edição, prazo `review_window_days` (padrão 7 dias) contados da aprovação das horas, não vale para falta, cancelamento ou estorno, e é opcional (nunca bloqueia pagamento). A empresa é notificada (todos os membros). A **nota média da empresa** (média de todas as avaliações recebidas dos prestadores, com 1 casa decimal, e a quantidade) aparece no card da busca e no detalhe da vaga, por exemplo "★ 4,6 · 12 avaliações"; sem avaliações, "Sem avaliações ainda". A empresa vê as avaliações recebidas em "Avaliações" (`GET /api/company/reviews/`), com o prestador no padrão **"Ana S."** (primeiro nome e inicial do último sobrenome): o CPF e o sobrenome completo nunca são expostos. Selo de contratante premium (US66) e filtro premium (US67) ficam fora.
 
 ## 7. Hora extra: decisão
 

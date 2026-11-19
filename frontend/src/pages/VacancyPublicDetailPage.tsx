@@ -6,6 +6,7 @@ import {
   formatDays,
   formatMinutes,
   formatShift,
+  ratingLabel,
   type JobItem,
   type VacancyPublicDetail,
   type VacancyRules,
@@ -91,7 +92,9 @@ export default function VacancyPublicDetailPage() {
         {vacancy.urgent && <Badge tone="warning">Urgente</Badge>}
         {vacancy.payment_guaranteed && <Badge tone="success">Pagamento garantido</Badge>}
       </p>
-      <p className="sub">{vacancy.company_name}</p>
+      <p className="sub">
+        {vacancy.company_name} · {ratingLabel(vacancy.company_rating)}
+      </p>
       <dl className="fatos">
         <div className="fato-destaque">
           <dt>Você recebe</dt>

@@ -23,6 +23,7 @@ from apps.payments import services as payments
 from apps.payments.models import Custody, LedgerEntry
 from apps.vacancies import photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
+from apps.vacancies.review_services import company_rating_summary
 from integrations.payments import PaymentGatewayError
 
 PENDING_COMPANY = "Cadastro em análise"
@@ -161,8 +162,9 @@ class VacancyCreateView(PublicReadMixin, CompanyAreaView):
         except DomainError as error:
             return Response({"detail": str(error)}, status=400)
         params = PlatformParameters.get()
+        ratings = company_rating_summary({v.company_id for v, _ in found})
         return Response(
-            {"results": [search.serialize_card(v, d, params) for v, d in found]}
+            {"results": [search.serialize_card(v, d, params, ratings) for v, d in found]}
         )
 
     def post(self, request):
