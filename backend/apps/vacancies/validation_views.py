@@ -12,7 +12,7 @@ from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import review_services as reviews
-from apps.vacancies.models import Assignment
+from apps.vacancies.models import Assignment, Review
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from integrations.payments import PaymentGatewayError
 
@@ -243,3 +243,35 @@ class AssignmentReviewView(CompanyAreaView):
         except DomainError as error:
             return Response({"detail": str(error)}, status=409)
         return Response(serialize_review(review), status=201)
+
+
+class CompanyReviewsView(CompanyAreaView):
+    """`GET /api/company/reviews/`: avaliações que a empresa recebeu dos prestadores (US64).
+
+    O prestador aparece como "Ana S."; nunca CPF nem sobrenome completo.
+    """
+
+    def get(self, request):
+        company = self.company(request)
+        if company is None:
+            return Response({"detail": NO_COMPANY}, status=403)
+        found = (
+            Review.objects.filter(
+                direction=Review.Direction.WORKER_TO_COMPANY,
+                assignment__vacancy__company=company,
+            )
+            .select_related("assignment__vacancy", "assignment__worker")
+            .order_by("-created_at", "-pk")
+        )
+        items = [
+            {
+                "id": r.pk,
+                "rating": r.rating,
+                "comment": r.comment,
+                "created_at": r.created_at.isoformat(),
+                "vacancy_title": r.assignment.vacancy.title,
+                "reviewer": reviews.reviewer_display_name(r.assignment.worker),
+            }
+            for r in found
+        ]
+        return Response({"summary": reviews.company_rating(company.pk), "results": items})

@@ -14,6 +14,7 @@ from apps.core.models import PlatformParameters
 from apps.core.permissions import IsWorkerUser
 from apps.vacancies import application_services as applications
 from apps.vacancies import assignment_services as assignments
+from apps.vacancies import review_services as reviews
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.photos import photo_url
 
@@ -69,6 +70,20 @@ def _execution_info(assignment, params, now):
         "contest_reason": (
             assignments.contest_reason(assignment) if assignment.status == AS.CONTESTED else ""
         ),
+        **_review_info(assignment, params, now),
+    }
+
+
+def _review_info(assignment, params, now):
+    """Botão "Avaliar empresa" (US64): `APROVADA`/`PAGA`, sem avaliação e dentro do prazo."""
+    if assignment.status not in reviews.REVIEWABLE_STATUSES:
+        return {"can_review": False, "review_deadline": None, "my_review": None}
+    mine = reviews.worker_review(assignment)
+    deadline = reviews.review_deadline(assignment, params)
+    return {
+        "can_review": reviews.can_worker_review(assignment, now=now, params=params),
+        "review_deadline": deadline and deadline.isoformat(),
+        "my_review": mine and {"rating": mine.rating, "comment": mine.comment},
     }
 
 
@@ -228,3 +243,45 @@ class AssignmentCheckOutView(AssignmentActionView):
     def run(self, request, assignment):
         return assignments.check_out(assignment, actor=request.user)
 
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AssignmentReviewCompanyView(WorkerAreaView):
+    """`POST /api/assignments/<id>/review-company/` com `{"rating": 1-5, "comment": "..."}` (US64).
+
+    Só o prestador da alocação (outro responde 404). Nota ou comentário inválidos: 400. Fora de
+    `APROVADA`/`PAGA`, já avaliada ou com o prazo (`review_window_days`) encerrado: 409.
+    """
+
+    def post(self, request, pk):
+        worker = self.worker(request)
+        assignment = None
+        if worker:
+            assignment = (
+                Assignment.objects.select_related("vacancy__company", "worker")
+                .filter(pk=pk, worker=worker)
+                .first()
+            )
+        if assignment is None:
+            return Response({"detail": "Alocação não encontrada."}, status=404)
+        try:
+            rating = reviews.validate_rating(request.data.get("rating"))
+            comment = reviews.validate_comment(request.data.get("comment"))
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=400)
+        try:
+            review = reviews.review_company(
+                assignment, author=request.user, rating=rating, comment=comment
+            )
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=409)
+        return Response(
+            {
+                "id": review.pk,
+                "assignment_id": assignment.pk,
+                "rating": review.rating,
+                "comment": review.comment,
+                "created_at": review.created_at.isoformat(),
+            },
+            status=201,
+        )

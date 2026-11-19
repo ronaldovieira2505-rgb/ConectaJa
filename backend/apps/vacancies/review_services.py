@@ -1,13 +1,15 @@
 """Avaliação do prestador pela empresa (US63). A entidade `Review` também serve à US64."""
 
 from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import IntegrityError, transaction
+from django.db.models import Avg, Count
 from django.utils import timezone
 
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
-from apps.core.notifications import notify
+from apps.core.notifications import notify, notify_company
 from apps.vacancies.models import Assignment, Review
 
 S = Assignment.Status
@@ -28,15 +30,65 @@ def company_review(assignment):
     return assignment.reviews.filter(direction=D.COMPANY_TO_WORKER).first()
 
 
-def can_company_review(assignment, *, now=None, params=None):
-    """Alocação aprovada/paga, ainda sem avaliação e dentro do prazo."""
+def worker_review(assignment):
+    """Avaliação da empresa feita pelo prestador (US64), se existir."""
+    return assignment.reviews.filter(direction=D.WORKER_TO_COMPANY).first()
+
+
+def _can_review(assignment, direction, now, params):
     now = now or timezone.now()
     if assignment.status not in REVIEWABLE_STATUSES:
         return False
     deadline = review_deadline(assignment, params)
     if deadline is None or now > deadline:
         return False
-    return not assignment.reviews.filter(direction=D.COMPANY_TO_WORKER).exists()
+    return not assignment.reviews.filter(direction=direction).exists()
+
+
+def can_company_review(assignment, *, now=None, params=None):
+    """Alocação aprovada/paga, ainda sem avaliação e dentro do prazo."""
+    return _can_review(assignment, D.COMPANY_TO_WORKER, now, params)
+
+
+def can_worker_review(assignment, *, now=None, params=None):
+    """Mesmas regras, para o prestador avaliar a empresa (US64)."""
+    return _can_review(assignment, D.WORKER_TO_COMPANY, now, params)
+
+
+def reviewer_display_name(worker):
+    """Nome do prestador sem sobrenome completo (padrão "Ana S."); nunca expõe o CPF."""
+    parts = (worker.full_name or "").split()
+    if not parts:
+        return "Prestador"
+    if len(parts) == 1:
+        return parts[0]
+    return f"{parts[0]} {parts[-1][0].upper()}."
+
+
+def company_rating_summary(company_ids):
+    """Média (1 casa decimal) e quantidade de avaliações por empresa, em uma só consulta.
+
+    Retorna `{company_id: {"average": float, "count": int}}`; empresas sem avaliação ficam de fora.
+    """
+    rows = (
+        Review.objects.filter(
+            direction=D.WORKER_TO_COMPANY, assignment__vacancy__company_id__in=set(company_ids)
+        )
+        .values("assignment__vacancy__company_id")
+        .annotate(avg=Avg("rating"), total=Count("pk"))
+    )
+    return {
+        row["assignment__vacancy__company_id"]: {
+            "average": float(Decimal(str(row["avg"])).quantize(Decimal("0.1"), ROUND_HALF_UP)),
+            "count": row["total"],
+        }
+        for row in rows
+    }
+
+
+def company_rating(company_id):
+    """Resumo de uma empresa; sem avaliações: `{"average": None, "count": 0}`."""
+    return company_rating_summary([company_id]).get(company_id) or {"average": None, "count": 0}
 
 
 def validate_rating(rating):
@@ -96,5 +148,46 @@ def review_worker(assignment, *, author, rating, comment="", now=None):
         f"A empresa avaliou o seu trabalho em “{assignment.vacancy.title}”: "
         f"{rating} de 5 estrelas.",
         link="/meus-trabalhos",
+    )
+    return review
+
+
+@transaction.atomic
+def review_company(assignment, *, author, rating, comment="", now=None):
+    """Prestador avalia a empresa (US64). Mesmas regras da US63: definitiva e com prazo."""
+    now = now or timezone.now()
+    rating = validate_rating(rating)
+    comment = validate_comment(comment)
+    assignment = Assignment.objects.select_for_update().select_related(
+        "vacancy__company", "worker"
+    ).get(pk=assignment.pk)
+    if assignment.status not in REVIEWABLE_STATUSES:
+        raise DomainError("Só é possível avaliar alocações com horas aprovadas ou pagas.")
+    if assignment.reviews.filter(direction=D.WORKER_TO_COMPANY).exists():
+        raise DomainError("Esta alocação já foi avaliada. A avaliação não pode ser alterada.")
+    deadline = review_deadline(assignment)
+    if deadline is None or now > deadline:
+        raise DomainError("O prazo para avaliar esta alocação terminou.")
+    try:
+        with transaction.atomic():
+            review = Review.objects.create(
+                assignment=assignment,
+                direction=D.WORKER_TO_COMPANY,
+                author=author,
+                rating=rating,
+                comment=comment,
+                created_at=now,
+            )
+    except IntegrityError:
+        raise DomainError(
+            "Esta alocação já foi avaliada. A avaliação não pode ser alterada."
+        ) from None
+    notify_company(
+        assignment.vacancy.company,
+        "AVALIACAO_RECEBIDA",
+        "Sua empresa recebeu uma avaliação",
+        f"{reviewer_display_name(assignment.worker)} avaliou a empresa após o turno "
+        f"“{assignment.vacancy.title}”: {rating} de 5 estrelas.",
+        link="/empresa/avaliacoes",
     )
     return review

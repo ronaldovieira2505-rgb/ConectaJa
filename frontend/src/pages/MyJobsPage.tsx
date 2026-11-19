@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api,
@@ -27,6 +27,67 @@ function badgeTone(status: string): 'neutral' | 'success' | 'warning' | 'info' {
   return 'neutral'
 }
 
+/** Formulário de "Avaliar empresa" (US64): nota de 1 a 5 e comentário opcional de até 500 caracteres. */
+function ReviewCompanyForm({
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  busy: boolean
+  onSubmit: (rating: number, comment: string) => void
+  onCancel: () => void
+}) {
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState('')
+  const id = useId()
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (rating > 0) onSubmit(rating, comment)
+      }}
+    >
+      <fieldset className="m-0 border-0 p-0">
+        <legend>Sua nota para a empresa</legend>
+        <div className="acoes">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name={`nota-${id}`}
+                value={value}
+                checked={rating === value}
+                onChange={() => setRating(value)}
+              />{' '}
+              {value} {value === 1 ? 'estrela' : 'estrelas'}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="field">
+        <label htmlFor={`comentario-${id}`}>Comentário (opcional)</label>
+        <textarea
+          id={`comentario-${id}`}
+          maxLength={500}
+          rows={3}
+          value={comment}
+          onChange={(event) => setComment(event.target.value)}
+        />
+        <small>{comment.length}/500</small>
+      </div>
+      <p>A avaliação é definitiva e não pode ser editada depois de enviada.</p>
+      <div className="acoes">
+        <Button type="submit" busy={busy} disabled={rating === 0}>
+          Enviar avaliação
+        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Voltar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 /** Meus trabalhos (US38): candidaturas e alocações do prestador agrupadas por situação. */
 export default function MyJobsPage() {
   const [jobs, setJobs] = useState<MyJobs | null>(null)
@@ -38,6 +99,7 @@ export default function MyJobsPage() {
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [cancellingId, setCancellingId] = useState<number | null>(null)
+  const [reviewingId, setReviewingId] = useState<number | null>(null)
 
   function load() {
     return api<MyJobs>('/api/workers/me/jobs/')
@@ -112,6 +174,23 @@ export default function MyJobsPage() {
     try {
       await api(`/api/assignments/${item.id}/cancel-by-worker/`, { method: 'POST' })
       await load()
+    } catch (err) {
+      say(item, 'error', (err as Error).message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function reviewCompany(item: JobItem, rating: number, comment: string) {
+    setBusyId(item.id)
+    try {
+      await api(`/api/assignments/${item.id}/review-company/`, {
+        method: 'POST',
+        body: { rating, comment },
+      })
+      setReviewingId(null)
+      await load()
+      say(item, 'success', 'Avaliação enviada. Obrigado!')
     } catch (err) {
       say(item, 'error', (err as Error).message)
     } finally {
@@ -259,6 +338,26 @@ export default function MyJobsPage() {
                           </Button>
                         </div>
                       ))}
+                    {item.can_review &&
+                      (reviewingId === item.id ? (
+                        <ReviewCompanyForm
+                          busy={busyId === item.id}
+                          onSubmit={(rating, comment) => reviewCompany(item, rating, comment)}
+                          onCancel={() => setReviewingId(null)}
+                        />
+                      ) : (
+                        <div className="acoes">
+                          <Button variant="secondary" onClick={() => setReviewingId(item.id)}>
+                            Avaliar empresa
+                          </Button>
+                        </div>
+                      ))}
+                    {item.my_review && (
+                      <p>
+                        Você avaliou a empresa: {item.my_review.rating} de 5
+                        {item.my_review.comment && ` · “${item.my_review.comment}”`}
+                      </p>
+                    )}
                     {notes[item.id] && (
                       <Alert tone={notes[item.id]!.tone}>{notes[item.id]!.text}</Alert>
                     )}
