@@ -1,0 +1,7 @@
+{% extends "admin/core/processar_prazos_changelist.html" %}
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'admin:indicators' %}" class="button">Indicadores</a>
+  </li>
+  {{ block.super }}
+{% endblock %}

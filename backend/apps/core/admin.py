@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from django import forms
@@ -14,10 +15,12 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
+from apps.accounts.models import Role
 from apps.companies.models import Company
 from apps.companies.services import lookup_cnpj
 from apps.core.deadlines import process_deadlines
 from apps.core.exceptions import DomainError
+from apps.core.indicators import compute_indicators, default_period
 from apps.core.models import (
     Notification,
     PlatformParameters,
@@ -26,6 +29,7 @@ from apps.core.models import (
     VerificationReview,
 )
 from apps.core.verification_queue import SLUG_KINDS, decide, queue_items
+from apps.vacancies.models import Vacancy
 from apps.workers.models import Worker, WorkerDocument
 from integrations.cnpj import CnpjLookupError
 
@@ -190,9 +194,60 @@ class PlatformParametersChangeAdmin(ReadOnlyAdmin):
 
 @admin.register(StateTransition)
 class StateTransitionAdmin(ProcessDeadlinesMixin, ReadOnlyAdmin):
+    """Também hospeda a página “Indicadores” (US78)."""
+
+    change_list_template = "admin/core/statetransition_changelist.html"
     list_display = ("created_at", "entity_type", "entity_id", "from_state", "to_state", "actor")
     list_filter = ("entity_type", "to_state")
     search_fields = ("entity_id", "reason")
+
+    def get_urls(self):
+        custom = [
+            path(
+                "indicadores/",
+                self.admin_site.admin_view(self.indicators_view),
+                name="indicators",
+            )
+        ]
+        return custom + super().get_urls()
+
+    def indicators_view(self, request):
+        if request.user.role != Role.ADMIN:
+            raise PermissionDenied
+        default_start, default_end = default_period()
+        errors = []
+        start = _parse_date(request.GET.get("inicio"), default_start, errors)
+        end = _parse_date(request.GET.get("fim"), default_end, errors)
+        if start > end:
+            errors.append("A data inicial não pode ser posterior à final.")
+            start, end = default_start, default_end
+        category = request.GET.get("categoria", "")
+        if category and category not in Vacancy.Category.values:
+            errors.append("Categoria inválida.")
+            category = ""
+        overall, by_category = compute_indicators(start, end, category=category)
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Indicadores",
+            "start": start,
+            "end": end,
+            "category": category,
+            "categories": Vacancy.Category.choices,
+            "errors": errors,
+            "overall": overall,
+            "by_category": by_category,
+        }
+        return TemplateResponse(request, "admin/core/indicators.html", context)
+
+
+def _parse_date(raw, default, errors):
+    if not raw:
+        return default
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        errors.append("Data inválida.")
+        return default
 
 
 COMPANY_COMPARISON_FIELDS = (
