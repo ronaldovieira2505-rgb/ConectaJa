@@ -136,6 +136,14 @@ export interface Vacancy {
   photo_url: string | null
 }
 
+/** Avaliação recebida pelo candidato (US40): sem valores nem endereço da vaga. */
+export interface CandidateReview {
+  rating: number
+  comment: string
+  created_at: string
+  company_name: string
+}
+
 /** Candidato pendente: sem CPF, telefone nem PIX (US42). */
 export interface Candidate {
   id: number
@@ -143,6 +151,10 @@ export interface Candidate {
   photo_url: string | null
   verified: boolean
   completed_shifts: number
+  no_shows_30d?: number
+  rating_avg?: number | null
+  rating_count?: number
+  recent_reviews?: CandidateReview[]
   applied_at: string
 }
 
@@ -160,6 +172,7 @@ export interface VacancyCandidates {
   filled_positions: number
   team_complete: boolean
   free_cancel_minutes_before?: number
+  no_show_window_days?: number
   candidates: Candidate[]
   team: TeamMember[]
 }

@@ -8,7 +8,7 @@ from django.db.models import Avg, Count
 from django.utils import timezone
 
 from apps.core.exceptions import DomainError
-from apps.core.models import PlatformParameters
+from apps.core.models import PlatformParameters, StateTransition
 from apps.core.notifications import notify, notify_company
 from apps.vacancies.models import Assignment, Review
 
@@ -89,6 +89,57 @@ def company_rating_summary(company_ids):
 def company_rating(company_id):
     """Resumo de uma empresa; sem avaliações: `{"average": None, "count": 0}`."""
     return company_rating_summary([company_id]).get(company_id) or {"average": None, "count": 0}
+
+
+RECENT_REVIEWS_LIMIT = 3
+
+
+def worker_rating(worker):
+    """Média (1 casa decimal) e quantidade das avaliações recebidas pelo prestador.
+
+    Sem avaliações: `{"average": None, "count": 0}`.
+    """
+    row = Review.objects.filter(
+        direction=D.COMPANY_TO_WORKER, assignment__worker=worker
+    ).aggregate(avg=Avg("rating"), total=Count("pk"))
+    if not row["total"]:
+        return {"average": None, "count": 0}
+    average = Decimal(str(row["avg"])).quantize(Decimal("0.1"), ROUND_HALF_UP)
+    return {"average": float(average), "count": row["total"]}
+
+
+def worker_recent_reviews(worker, limit=RECENT_REVIEWS_LIMIT):
+    """Últimas avaliações do prestador: nota, comentário, data e nome fantasia de quem avaliou.
+
+    Não traz valores pagos nem dados da vaga (título, endereço).
+    """
+    reviews = (
+        Review.objects.filter(direction=D.COMPANY_TO_WORKER, assignment__worker=worker)
+        .select_related("assignment__vacancy__company")
+        .order_by("-created_at", "-pk")[:limit]
+    )
+    return [
+        {
+            "rating": review.rating,
+            "comment": review.comment,
+            "created_at": review.created_at.isoformat(),
+            "company_name": str(review.assignment.vacancy.company),
+        }
+        for review in reviews
+    ]
+
+
+def worker_no_shows_recent(worker, *, now=None, params=None):
+    """Faltas na janela `no_show_window_days` (mesma contagem da suspensão automática)."""
+    now = now or timezone.now()
+    params = params or PlatformParameters.get()
+    since = now - timedelta(days=params.no_show_window_days)
+    return StateTransition.objects.filter(
+        entity_type="Assignment",
+        to_state=Assignment.Status.NO_SHOW,
+        created_at__gte=since,
+        entity_id__in=worker.assignments.values("pk"),
+    ).count()
 
 
 def validate_rating(rating):

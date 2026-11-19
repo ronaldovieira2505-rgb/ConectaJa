@@ -174,4 +174,55 @@ describe('Candidatos da vaga', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não há posição livre nesta vaga.')
   })
+
+  it('mostra nota média, quantidade e as avaliações recentes ao expandir', async () => {
+    const rated = {
+      ...candidate,
+      no_shows_30d: 1,
+      rating_avg: 4.8,
+      rating_count: 9,
+      recent_reviews: [
+        { rating: 5, comment: 'Pontual e atencioso', created_at: '2026-10-20T15:00:00Z', company_name: 'Padaria do Zé' },
+        { rating: 4, comment: '', created_at: '2026-10-10T15:00:00Z', company_name: 'Mercado Sol' },
+      ],
+    }
+    mockApi({
+      ...session,
+      'GET /api/vacancies/7/candidates/': () => ({
+        body: { positions: 1, filled_positions: 0, team_complete: false, candidates: [rated], team: [] },
+      }),
+    })
+    renderPage()
+
+    expect(await screen.findByText(/★ 4,8 · 9 turnos avaliados/)).toBeInTheDocument()
+    expect(screen.getByText(/1 falta nos últimos 30 dias/)).toBeInTheDocument()
+    expect(screen.queryByText('Padaria do Zé', { exact: false })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Ver avaliações de Maria/ }))
+
+    expect(screen.getByText('Pontual e atencioso')).toBeInTheDocument()
+    expect(screen.getByText(/Padaria do Zé/)).toBeInTheDocument()
+    expect(screen.getByText(/Mercado Sol/)).toBeInTheDocument()
+    expect(screen.getByText(/20\/10\/2026/)).toBeInTheDocument()
+  })
+
+  it('mostra "Novo na plataforma" para candidato sem avaliações', async () => {
+    mockApi({
+      ...session,
+      'GET /api/vacancies/7/candidates/': () => ({
+        body: {
+          positions: 1,
+          filled_positions: 0,
+          team_complete: false,
+          candidates: [{ ...candidate, no_shows_30d: 0, rating_avg: null, rating_count: 0, recent_reviews: [] }],
+          team: [],
+        },
+      }),
+    })
+    renderPage()
+
+    expect(await screen.findByText('Novo na plataforma')).toBeInTheDocument()
+    expect(screen.getByText(/0 faltas nos últimos 30 dias/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /avaliações/ })).not.toBeInTheDocument()
+  })
 })

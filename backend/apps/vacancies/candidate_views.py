@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from apps.core.exceptions import DomainError, InvalidTransition
 from apps.core.models import PlatformParameters
 from apps.vacancies import application_services as applications
+from apps.vacancies import review_services as reviews
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from apps.workers.models import Worker, WorkerDocument
@@ -24,9 +25,10 @@ def _first_name(worker):
     return parts[0] if parts else ""
 
 
-def serialize_candidate(application):
+def serialize_candidate(application, params=None):
     """Só o que a empresa pode ver antes da alocação: sem CPF, telefone nem PIX."""
     worker = application.worker
+    rating = reviews.worker_rating(worker)
     return {
         "id": application.pk,
         "name": _first_name(worker),
@@ -35,6 +37,10 @@ def serialize_candidate(application):
         ),
         "verified": worker.verification_status == Worker.VerificationStatus.APPROVED,
         "completed_shifts": worker.assignments.filter(status=Assignment.Status.PAID).count(),
+        "no_shows_30d": reviews.worker_no_shows_recent(worker, params=params),
+        "rating_avg": rating["average"],
+        "rating_count": rating["count"],
+        "recent_reviews": reviews.worker_recent_reviews(worker),
         "applied_at": application.created_at.isoformat(),
     }
 
@@ -95,13 +101,15 @@ class VacancyCandidatesView(CandidateAreaView):
             .order_by("pk")
         )
         filled = vacancy.filled_positions
+        params = PlatformParameters.get()
         return Response(
             {
                 "positions": vacancy.positions,
                 "filled_positions": filled,
                 "team_complete": vacancy.unavailable_positions >= vacancy.positions,
-                "free_cancel_minutes_before": PlatformParameters.get().free_cancel_minutes_before,
-                "candidates": [serialize_candidate(a) for a in pending],
+                "free_cancel_minutes_before": params.free_cancel_minutes_before,
+                "no_show_window_days": params.no_show_window_days,
+                "candidates": [serialize_candidate(a, params) for a in pending],
                 "team": [serialize_team_member(a) for a in team],
             }
         )
