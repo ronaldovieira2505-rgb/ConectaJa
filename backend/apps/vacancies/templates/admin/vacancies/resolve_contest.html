@@ -15,6 +15,17 @@
     <tr><th>Check-out</th><td>{{ assignment.check_out_at|date:"d/m/Y H:i"|default:"—" }}</td></tr>
     <tr><th>Contestada em</th><td>{{ contested_at|date:"d/m/Y H:i" }}</td></tr>
     <tr><th>Motivo da empresa</th><td>{{ company_reason }}</td></tr>
+    <tr>
+      <th>Versão do prestador</th>
+      <td id="worker-response">
+        {% if assignment.contest_response_at %}
+          {{ assignment.contest_response|linebreaksbr }}
+          <br><small>Enviada em {{ assignment.contest_response_at|date:"d/m/Y H:i" }}</small>
+        {% else %}
+          O prestador ainda não respondeu.
+        {% endif %}
+      </td>
+    </tr>
   </table>
   <form method="post" id="decision-form" style="margin-top:24px">
     {% csrf_token %}

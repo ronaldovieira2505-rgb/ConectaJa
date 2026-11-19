@@ -4,8 +4,10 @@ import {
   ApiError,
   brl,
   formatDateTime,
+  formatDayMonthTime,
   formatRemaining,
   formatTime,
+  type ContestedAssignment,
   type PendingAssignment,
 } from '../api'
 import CancelReasonForm from '../components/CancelReasonForm'
@@ -20,6 +22,7 @@ export default function PendingAssignmentsSection({
   onChange?: () => void
 }) {
   const [items, setItems] = useState<PendingAssignment[] | null>(null)
+  const [contested, setContested] = useState<ContestedAssignment[]>([])
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [contestingId, setContestingId] = useState<number | null>(null)
@@ -27,10 +30,11 @@ export default function PendingAssignmentsSection({
   const load = useCallback(async () => {
     const query = vacancyId !== undefined ? `?vacancy=${vacancyId}` : ''
     try {
-      const data = await api<{ results: PendingAssignment[] }>(
+      const data = await api<{ results: PendingAssignment[]; contested?: ContestedAssignment[] }>(
         `/api/company/assignments/pending/${query}`,
       )
       setItems(data.results)
+      setContested(data.contested ?? [])
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível carregar as horas a conferir.')
     }
@@ -143,6 +147,29 @@ export default function PendingAssignmentsSection({
           </li>
         ))}
       </ul>
+      {contested.length > 0 && (
+        <>
+          <h3>Horas contestadas</h3>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {contested.map((c) => (
+              <li key={c.id} className="rounded-cartao bg-white p-4">
+                <strong>{c.worker_first_name}</strong>
+                {vacancyId === undefined && <> · {c.vacancy_title}</>}{' '}
+                <Badge tone="info">Contestada</Badge>
+                <p>Seu motivo: {c.contest_reason}</p>
+                {c.contest_response_at ? (
+                  <p>
+                    Versão do prestador, enviada em {formatDayMonthTime(c.contest_response_at)}:{' '}
+                    {c.contest_response}
+                  </p>
+                ) : (
+                  <p className="sub">O prestador ainda não respondeu. A equipe vai decidir.</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   )
 }

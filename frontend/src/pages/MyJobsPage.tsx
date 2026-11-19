@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   api,
   brl,
+  formatDayMonthTime,
   formatShift,
   formatTime,
   type JobGroupKey,
@@ -82,6 +83,55 @@ function ReviewCompanyForm({
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>
           Voltar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+const RESPONSE_MIN = 10
+const RESPONSE_MAX = 1000
+const RESPONSE_ERROR = 'A sua versão deve ter de 10 a 1.000 caracteres.'
+
+/** "Sua versão" (US58): texto de 10 a 1.000 caracteres, enviado uma única vez. */
+function ContestResponseForm({
+  busy,
+  onSubmit,
+}: {
+  busy: boolean
+  onSubmit: (text: string) => void
+}) {
+  const [text, setText] = useState('')
+  const [error, setError] = useState('')
+  const id = useId()
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        const size = text.trim().length
+        if (size < RESPONSE_MIN || size > RESPONSE_MAX) {
+          setError(RESPONSE_ERROR)
+          return
+        }
+        setError('')
+        onSubmit(text.trim())
+      }}
+    >
+      <div className="field">
+        <label htmlFor={`versao-${id}`}>Sua versão</label>
+        <textarea
+          id={`versao-${id}`}
+          rows={4}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <small>{text.length}/1000</small>
+      </div>
+      {error && <Alert tone="error">{error}</Alert>}
+      <p>A resposta é única e não pode ser editada depois de enviada.</p>
+      <div className="acoes">
+        <Button type="submit" busy={busy}>
+          Enviar resposta
         </Button>
       </div>
     </form>
@@ -198,6 +248,22 @@ export default function MyJobsPage() {
     }
   }
 
+  async function respondToContest(item: JobItem, text: string) {
+    setBusyId(item.id)
+    try {
+      await api(`/api/assignments/${item.id}/contest-response/`, {
+        method: 'POST',
+        body: { text },
+      })
+      await load()
+      say(item, 'success', 'Resposta enviada. A equipe vai analisar as duas versões.')
+    } catch (err) {
+      say(item, 'error', (err as Error).message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   async function withdraw(item: JobItem) {
     setActionError('')
     try {
@@ -286,6 +352,18 @@ export default function MyJobsPage() {
                         Horas contestadas pela empresa.
                         {item.contest_reason && <> Motivo: {item.contest_reason}</>}
                       </Alert>
+                    )}
+                    {item.can_respond_to_contest && (
+                      <ContestResponseForm
+                        busy={busyId === item.id}
+                        onSubmit={(text) => respondToContest(item, text)}
+                      />
+                    )}
+                    {item.contest_response && item.contest_response_at && (
+                      <p>
+                        Sua versão, enviada em {formatDayMonthTime(item.contest_response_at)}:{' '}
+                        {item.contest_response}
+                      </p>
                     )}
                     {item.check_in_at && (
                       <p>

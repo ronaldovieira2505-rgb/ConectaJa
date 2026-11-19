@@ -51,33 +51,60 @@ def serialize_pending_assignment(assignment, params, now):
     }
 
 
+def serialize_contested_assignment(assignment):
+    """Alocação contestada: motivo da empresa e a versão do prestador, se já respondeu (US58)."""
+    vacancy = assignment.vacancy
+    return {
+        "id": assignment.pk,
+        "vacancy_id": vacancy.pk,
+        "vacancy_title": vacancy.title,
+        "worker_first_name": _first_name(assignment.worker),
+        "status": assignment.status,
+        "status_label": assignment.get_status_display(),
+        "contest_reason": assignments.contest_reason(assignment),
+        "contest_response": assignment.contest_response,
+        "contest_response_at": assignment.contest_response_at
+        and assignment.contest_response_at.isoformat(),
+    }
+
+
 class CompanyPendingAssignmentsView(CompanyAreaView):
     """`GET /api/company/assignments/pending/`: alocações AGUARDANDO_VALIDACAO das minhas vagas.
 
-    Filtro opcional `?vacancy=<id>` para a seção dentro da vaga.
+    Filtro opcional `?vacancy=<id>` para a seção dentro da vaga. Traz também, em `contested`,
+    as alocações `CONTESTADA` com o motivo e a resposta do prestador (US58).
     """
 
     def get(self, request):
         company = self.company(request)
         if company is None:
             return Response({"detail": NO_COMPANY}, status=403)
-        queryset = Assignment.objects.filter(
-            vacancy__company=company,
-            status=Assignment.Status.AWAITING_VALIDATION,
-            check_out_at__isnull=False,
-        ).select_related("vacancy", "worker")
+        owned = Assignment.objects.filter(vacancy__company=company).select_related(
+            "vacancy", "worker"
+        )
         vacancy_id = request.query_params.get("vacancy")
         if vacancy_id:
             if not vacancy_id.isdigit():
                 return Response({"detail": "Vaga inválida."}, status=400)
-            queryset = queryset.filter(vacancy_id=int(vacancy_id))
+            owned = owned.filter(vacancy_id=int(vacancy_id))
+        queryset = owned.filter(
+            status=Assignment.Status.AWAITING_VALIDATION, check_out_at__isnull=False
+        )
+        contested = owned.filter(status=Assignment.Status.CONTESTED)
         params = PlatformParameters.get()
         now = timezone.now()
         items = [
             serialize_pending_assignment(a, params, now)
             for a in queryset.order_by("check_out_at", "pk")
         ]
-        return Response({"results": items})
+        return Response(
+            {
+                "results": items,
+                "contested": [
+                    serialize_contested_assignment(a) for a in contested.order_by("pk")
+                ],
+            }
+        )
 
 
 @method_decorator(csrf_protect, name="dispatch")

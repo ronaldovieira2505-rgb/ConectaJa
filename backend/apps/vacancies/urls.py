@@ -64,6 +64,11 @@ urlpatterns = [
         name="assignment-contest",
     ),
     path(
+        "assignments/<int:pk>/contest-response/",
+        worker_views.AssignmentContestResponseView.as_view(),
+        name="assignment-contest-response",
+    ),
+    path(
         "assignments/<int:pk>/review/",
         validation_views.AssignmentReviewView.as_view(),
         name="assignment-review",

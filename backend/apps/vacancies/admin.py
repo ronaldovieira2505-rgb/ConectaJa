@@ -118,10 +118,11 @@ class AssignmentAdmin(admin.ModelAdmin):
         "check_in_at",
         "check_out_at",
         "contest_info",
+        "worker_response",
         "decision",
     )
     list_filter = ("status", OverdueContestFilter)
-    readonly_fields = ("status",)
+    readonly_fields = ("status", "contest_response", "contest_response_at")
 
     @admin.display(description="Contestação")
     def contest_info(self, obj):
@@ -134,6 +135,13 @@ class AssignmentAdmin(admin.ModelAdmin):
         if timezone.now() - since > CONTEST_ALERT_AFTER:
             return format_html('<strong style="color:#b00020">⚠ {} (mais de 48 h)</strong>', text)
         return text
+
+    @admin.display(description="Resposta do prestador")
+    def worker_response(self, obj):
+        if obj.contest_response_at is None:
+            return "—"
+        sent = f"{timezone.localtime(obj.contest_response_at):%d/%m/%Y %H:%M}"
+        return format_html("{} <small>({})</small>", obj.contest_response, sent)
 
     @admin.display(description="Decisão")
     def decision(self, obj):

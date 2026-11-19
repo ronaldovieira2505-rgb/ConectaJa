@@ -71,6 +71,10 @@ def _execution_info(assignment, params, now):
         "contest_reason": (
             assignments.contest_reason(assignment) if assignment.status == AS.CONTESTED else ""
         ),
+        "can_respond_to_contest": assignments.can_respond_to_contest(assignment),
+        "contest_response": assignment.contest_response,
+        "contest_response_at": assignment.contest_response_at
+        and assignment.contest_response_at.isoformat(),
         **_review_info(assignment, params, now),
     }
 
@@ -250,6 +254,37 @@ class AssignmentCheckOutView(AssignmentActionView):
     def run(self, request, assignment):
         return assignments.check_out(assignment, actor=request.user)
 
+@method_decorator(csrf_protect, name="dispatch")
+class AssignmentContestResponseView(WorkerAreaView):
+    """`POST /api/assignments/<id>/contest-response/` com `{"text": "..."}` (US58).
+
+    Só o prestador da alocação (outro usuário responde 404). Texto vazio, com menos de 10 ou mais
+    de 1.000 caracteres: 400. Fora de `CONTESTADA` ou já respondida: 409. A resposta é única,
+    definitiva e não muda o estado da alocação.
+    """
+
+    def post(self, request, pk):
+        worker = self.worker(request)
+        assignment = None
+        if worker:
+            assignment = (
+                Assignment.objects.select_related("vacancy__company")
+                .filter(pk=pk, worker=worker)
+                .first()
+            )
+        if assignment is None:
+            return Response({"detail": "Alocação não encontrada."}, status=404)
+        try:
+            text = assignments.clean_contest_response(request.data.get("text"))
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=400)
+        try:
+            assignment = assignments.respond_to_contest(
+                assignment, text=text, actor=request.user
+            )
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=409)
+        return Response(serialize_assignment(assignment))
 
 
 @method_decorator(csrf_protect, name="dispatch")
