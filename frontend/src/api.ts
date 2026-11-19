@@ -316,6 +316,10 @@ export interface JobItem {
   check_out_auto?: boolean
   // Motivo informado pela empresa quando as horas foram contestadas (US57).
   contest_reason?: string
+  // Resposta do prestador à contestação (US58): única e definitiva.
+  can_respond_to_contest?: boolean
+  contest_response?: string
+  contest_response_at?: string | null
   // Avaliação da empresa pelo prestador (US64).
   can_review?: boolean
   review_deadline?: string | null
@@ -370,6 +374,27 @@ export interface PendingAssignment {
   auto_approve_at: string
   auto_approve_in_seconds: number
   can_contest: boolean
+}
+
+/** Alocação contestada, com o motivo da empresa e a versão do prestador (US58). */
+export interface ContestedAssignment {
+  id: number
+  vacancy_id: number
+  vacancy_title: string
+  worker_first_name: string
+  contest_reason: string
+  contest_response: string
+  contest_response_at: string | null
+}
+
+/** "dd/mm às hh:mm" em horário de Brasília, como em "enviada em 03/11 às 14:30". */
+export function formatDayMonthTime(iso: string): string {
+  const date = new Date(iso).toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+  })
+  return `${date} às ${formatTime(iso)}`
 }
 
 /** "23 h 10 min" a partir de uma quantidade de segundos. */

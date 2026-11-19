@@ -75,7 +75,7 @@ Calculados: `filled_positions` (alocações ativas), `worker_net_cents` = valor 
 ### Assignment — Alocação (o turno de um prestador)
 Criada quando a candidatura é aprovada. Campos: `vacancy`, `worker`, `application`, `status`,
 `check_in_at`, `check_in_lat`, `check_in_lng`, `check_in_distance_m`, `check_out_at`, `check_out_auto` (bool),
-`validated_at`, `validated_by` (usuário ou `SISTEMA`).
+`validated_at`, `validated_by` (usuário ou `SISTEMA`), `contest_response` (texto de 10 a 1.000 caracteres, resposta única do prestador à contestação, US58) e `contest_response_at` (data e hora do envio; vazio = ainda não respondeu). A resposta não é um estado novo nem uma transição.
 
 ## Dinheiro (simulado no MVP, mesmo desenho do PSP real)
 

@@ -125,6 +125,27 @@ def _transition_events(vacancy):
     return events
 
 
+def _contest_response_events(vacancy):
+    """"Prestador respondeu à contestação" (US58): a resposta não é uma transição de estado."""
+    answered = Assignment.objects.filter(
+        vacancy=vacancy, contest_response_at__isnull=False
+    ).select_related("worker__user")
+    return [
+        HistoryEvent(
+            at=assignment.contest_response_at,
+            category="Alocação",
+            actor=actor_label(assignment.worker.user),
+            description=(
+                f"Alocação #{assignment.pk} — {_worker_label(assignment.worker)}: "
+                "Prestador respondeu à contestação"
+            ),
+            reason=assignment.contest_response,
+            order=(0, assignment.pk),
+        )
+        for assignment in answered
+    ]
+
+
 def _change_events(vacancy):
     return [
         HistoryEvent(
@@ -192,5 +213,10 @@ def financial_summary(vacancy):
 
 def build_history(vacancy):
     """Eventos em ordem cronológica (empates resolvidos por origem e id)."""
-    events = _transition_events(vacancy) + _change_events(vacancy) + _ledger_events(vacancy)
+    events = (
+        _transition_events(vacancy)
+        + _contest_response_events(vacancy)
+        + _change_events(vacancy)
+        + _ledger_events(vacancy)
+    )
     return sorted(events, key=lambda e: (e.at, e.order))

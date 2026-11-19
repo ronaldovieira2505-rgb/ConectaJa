@@ -221,6 +221,48 @@ def contest(assignment, *, reason, actor=None, now=None):
     return assignment
 
 
+def clean_contest_response(text):
+    """Texto da resposta do prestador: de 10 a 1.000 caracteres (sem contar espaços nas pontas)."""
+    text = text.strip() if isinstance(text, str) else ""
+    low, high = Assignment.CONTEST_RESPONSE_MIN_LENGTH, Assignment.CONTEST_RESPONSE_MAX_LENGTH
+    if not low <= len(text) <= high:
+        raise DomainError("A sua versão deve ter de 10 a 1.000 caracteres.")
+    return text
+
+
+def can_respond_to_contest(assignment):
+    """Só enquanto `CONTESTADA` e se o prestador ainda não respondeu (resposta única)."""
+    return assignment.status == S.CONTESTED and assignment.contest_response_at is None
+
+
+@transaction.atomic
+def respond_to_contest(assignment, *, text, actor=None, now=None):
+    """Prestador envia a sua versão. Não muda o estado: segue `CONTESTADA` até o admin decidir."""
+    now = now or timezone.now()
+    text = clean_contest_response(text)
+    # Relê com trava para que dois envios simultâneos não gravem duas respostas.
+    locked = Assignment.objects.select_for_update().select_related("vacancy__company").get(
+        pk=assignment.pk
+    )
+    if locked.status != S.CONTESTED:
+        raise DomainError("Esta alocação não está contestada, então não aceita resposta.")
+    if locked.contest_response_at is not None:
+        raise DomainError("Você já enviou a sua versão. A resposta não pode ser alterada.")
+    locked.contest_response = text
+    locked.contest_response_at = now
+    locked.save(update_fields=["contest_response", "contest_response_at"])
+    title = locked.vacancy.title
+    message = f"O prestador respondeu à contestação das horas de “{title}”."
+    notify_admins("CONTESTACAO_RESPOSTA", "Prestador respondeu à contestação", message)
+    notify_company(
+        locked.vacancy.company,
+        "CONTESTACAO_RESPOSTA",
+        "Prestador respondeu à contestação",
+        message,
+    )
+    return locked
+
+
 @transaction.atomic
 def resolve_contest(assignment, *, in_favor_of_worker, reason, actor, now=None):
     """Admin decide: a favor do prestador → APROVADA; da empresa → ESTORNADA."""

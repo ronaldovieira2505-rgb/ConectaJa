@@ -220,6 +220,17 @@ class Assignment(models.Model):
         verbose_name="validada por",
         help_text="Vazio com data de validação = SISTEMA.",
     )
+    contest_response = models.TextField(
+        "resposta do prestador à contestação",
+        blank=True,
+        help_text="Resposta única e definitiva (US58).",
+    )
+    contest_response_at = models.DateTimeField(
+        "resposta à contestação enviada em", null=True, blank=True
+    )
+
+    CONTEST_RESPONSE_MIN_LENGTH = 10
+    CONTEST_RESPONSE_MAX_LENGTH = 1000
 
     class Meta:
         verbose_name = "alocação"
