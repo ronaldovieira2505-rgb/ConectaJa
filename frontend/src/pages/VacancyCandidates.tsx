@@ -83,6 +83,19 @@ export default function VacancyCandidatesSection({
     }
   }
 
+  async function toggleAutoCall(enabled: boolean) {
+    setError('')
+    try {
+      await api(`/api/vacancies/${vacancyId}/waitlist-auto-call/`, {
+        method: 'POST',
+        body: { enabled },
+      })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível salvar a configuração.')
+    }
+    await load()
+  }
+
   async function cancelAssignment(id: number, reason: string) {
     setError('')
     try {
@@ -104,9 +117,29 @@ export default function VacancyCandidatesSection({
       {error && <Alert tone="error">{error}</Alert>}
       {notice && <Alert tone="success">{notice}</Alert>}
       {data.candidates.length === 0 && <p>Nenhum candidato pendente.</p>}
+      {data.team_complete && (
+        <>
+          <h3>Lista de espera</h3>
+          <label>
+            <input
+              type="checkbox"
+              checked={data.auto_call_waitlist ?? true}
+              onChange={(e) => toggleAutoCall(e.target.checked)}
+            />{' '}
+            Chamar automaticamente da lista de espera
+          </label>
+          <p>
+            Se uma posição for liberada por falta ou cancelamento do prestador, o primeiro da lista
+            que puder trabalhar é aprovado automaticamente.
+          </p>
+        </>
+      )}
       <ul>
         {data.candidates.map((c) => (
           <li key={c.id}>
+            {c.waitlist_position != null && (
+              <Badge>{`${c.waitlist_position}º na lista de espera`}</Badge>
+            )}{' '}
             {c.photo_url && <img src={c.photo_url} alt={`Foto de ${c.name}`} width={48} height={48} />}
             <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}
             <p>

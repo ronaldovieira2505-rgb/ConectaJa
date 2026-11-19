@@ -11,6 +11,7 @@ from apps.core.models import PlatformParameters, StateTransition
 from apps.core.notifications import notify, notify_admins, notify_company
 from apps.core.state_machine import transition
 from apps.payments import services as payments
+from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Assignment
 from apps.vacancies.state_machine import ASSIGNMENT_MACHINE
 from apps.workers.services import apply_automatic_suspension
@@ -91,6 +92,7 @@ def auto_check_out(assignment, *, now=None):
 def mark_no_show(assignment, *, now=None):
     """Falta: libera a posição, reabre a vaga, avisa a empresa e avalia a suspensão."""
     now = now or timezone.now()
+    was_full = waitlist.is_team_complete(assignment.vacancy)
     assignment = transition(
         assignment,
         ASSIGNMENT_MACHINE,
@@ -109,6 +111,7 @@ def mark_no_show(assignment, *, now=None):
         f"Um prestador não compareceu a “{vacancy.title}”. A vaga foi reaberta.",
     )
     apply_automatic_suspension(assignment.worker, now=now)
+    waitlist.call_from_waitlist(vacancy, was_full=was_full, now=now)
     return assignment
 
 
@@ -353,6 +356,7 @@ def cancel_by_worker(assignment, *, actor=None, now=None):
     params = PlatformParameters.get()
     vacancy = assignment.vacancy
     late = is_late_worker_cancel(vacancy, now=now, params=params)
+    was_full = waitlist.is_team_complete(vacancy)
     assignment = transition(
         assignment,
         ASSIGNMENT_MACHINE,
@@ -403,6 +407,7 @@ def cancel_by_worker(assignment, *, actor=None, now=None):
         f"Um prestador cancelou a participação em “{vacancy.title}”. "
         "A posição foi liberada para novas candidaturas.",
     )
+    waitlist.call_from_waitlist(vacancy, was_full=was_full, now=now)
     return assignment
 
 

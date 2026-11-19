@@ -15,6 +15,7 @@ from apps.core.permissions import IsWorkerUser
 from apps.vacancies import application_services as applications
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import review_services as reviews
+from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.photos import photo_url
 
@@ -113,8 +114,14 @@ def _item(kind, obj, vacancy, params):
     }
 
 
-def serialize_application(application):
-    return _item("application", application, application.vacancy, PlatformParameters.get())
+def serialize_application(application, params=None):
+    params = params or PlatformParameters.get()
+    item = _item("application", application, application.vacancy, params)
+    position = waitlist.waitlist_position(application)
+    item["waitlist_position"] = position
+    if position is not None:
+        item["status_label"] = waitlist.waitlist_label(position)
+    return item
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -176,7 +183,7 @@ class WorkerJobsView(WorkerAreaView):
                 key = "closed"
             else:  # APROVADA: o acompanhamento continua na alocação
                 continue
-            groups[key].append(_item("application", application, application.vacancy, params))
+            groups[key].append(serialize_application(application, params))
         for assignment in worker.assignments.select_related("vacancy__company"):
             if assignment.status == AS.CONFIRMED:
                 key = "upcoming"

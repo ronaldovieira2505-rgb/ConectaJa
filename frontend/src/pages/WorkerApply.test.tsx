@@ -196,6 +196,26 @@ describe('Meus trabalhos (US38)', () => {
     expect(screen.queryByRole('heading', { name: 'Em andamento' })).not.toBeInTheDocument()
   })
 
+  it('mostra "Na lista de espera (posição N)" para a candidatura pendente (US43)', async () => {
+    mockApi({
+      ...session,
+      'GET /api/workers/me/jobs/': () => ({
+        body: {
+          groups: {
+            ...groups,
+            waiting: [
+              { ...job, status_label: 'Na lista de espera (posição 2)', waitlist_position: 2 },
+            ],
+          },
+        },
+      }),
+    })
+    renderAt('/meus-trabalhos')
+
+    const waiting = await screen.findByRole('region', { name: 'Aguardando' })
+    expect(within(waiting).getByText('Na lista de espera (posição 2)')).toBeInTheDocument()
+  })
+
   it('desiste de uma candidatura pendente e recarrega a lista', async () => {
     let withdrawn = false
     const fetchMock = mockApi({

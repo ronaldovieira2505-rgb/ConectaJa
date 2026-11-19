@@ -56,6 +56,9 @@ class Vacancy(models.Model):
         "status", max_length=30, choices=Status.choices, default=Status.AWAITING_PAYMENT
     )
     reopened = models.BooleanField("reaberta por falta", default=False)
+    auto_call_waitlist = models.BooleanField(
+        "chamar automaticamente da lista de espera", default=True
+    )
     photo = models.FileField(
         "foto do local", upload_to="vacancy_photos/", storage=private_storage, blank=True
     )

@@ -4,7 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.exceptions import DomainError
-from apps.core.notifications import notify
+from apps.core.notifications import notify, notify_company
 from apps.core.state_machine import record_creation, transition
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.state_machine import APPLICATION_MACHINE, ASSIGNMENT_MACHINE
@@ -12,6 +12,11 @@ from apps.workers.models import Worker
 
 A = Application.Status
 MY_JOBS_LINK = "/meus-trabalhos"
+
+
+def first_name(worker):
+    parts = worker.full_name.split()
+    return parts[0] if parts else "Prestador"
 
 
 def has_overlap(worker, vacancy):
@@ -47,8 +52,11 @@ def apply_to_vacancy(vacancy, worker, *, actor=None, now=None):
 
 
 @transaction.atomic
-def approve_application(application, *, actor=None, now=None):
-    """Empresa aprova: cria a Alocação CONFIRMADA e notifica o prestador."""
+def approve_application(application, *, actor=None, now=None, from_waitlist=False):
+    """Empresa aprova: cria a Alocação CONFIRMADA e notifica o prestador.
+
+    `from_waitlist=True` é a chamada automática da lista de espera (US43): o ator é o SISTEMA.
+    """
     now = now or timezone.now()
     APPLICATION_MACHINE.validate(application.status, A.APPROVED)
     vacancy = Vacancy.objects.select_for_update().get(pk=application.vacancy_id)
@@ -67,7 +75,11 @@ def approve_application(application, *, actor=None, now=None):
         APPLICATION_MACHINE,
         A.APPROVED,
         actor=actor,
-        reason="Candidatura aprovada pela empresa",
+        reason=(
+            "Chamada automática da lista de espera"
+            if from_waitlist
+            else "Candidatura aprovada pela empresa"
+        ),
         now=now,
         decided_at=now,
         decided_by=actor,
@@ -76,15 +88,35 @@ def approve_application(application, *, actor=None, now=None):
         vacancy=vacancy, worker=worker, application=application
     )
     record_creation(
-        assignment, ASSIGNMENT_MACHINE, actor=actor, reason="Candidatura aprovada", now=now
+        assignment,
+        ASSIGNMENT_MACHINE,
+        actor=actor,
+        reason="Chamado da lista de espera" if from_waitlist else "Candidatura aprovada",
+        now=now,
     )
-    notify(
-        worker.user,
-        "CANDIDATURA_APROVADA",
-        "Candidatura aprovada",
-        f"Você foi aprovado para “{vacancy.title}”.",
-        link=MY_JOBS_LINK,
-    )
+    if from_waitlist:
+        notify(
+            worker.user,
+            "CHAMADO_LISTA_DE_ESPERA",
+            "Você foi chamado da lista de espera",
+            f"Uma posição foi liberada e você foi aprovado para “{vacancy.title}”.",
+            link=MY_JOBS_LINK,
+        )
+        notify_company(
+            vacancy.company,
+            "CHAMADO_LISTA_DE_ESPERA",
+            "Candidato chamado da lista de espera",
+            f"{first_name(worker)} foi chamado da lista de espera e aprovado para "
+            f"“{vacancy.title}”.",
+        )
+    else:
+        notify(
+            worker.user,
+            "CANDIDATURA_APROVADA",
+            "Candidatura aprovada",
+            f"Você foi aprovado para “{vacancy.title}”.",
+            link=MY_JOBS_LINK,
+        )
     return assignment
 
 
