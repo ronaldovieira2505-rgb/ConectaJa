@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError, formatDateTime, type Candidate, type VacancyCandidates } from '../api'
+import Avatar from '../components/Avatar'
 import CancelReasonForm from '../components/CancelReasonForm'
 import { Alert, Badge, Button } from '../components/ui'
 
@@ -134,14 +135,16 @@ export default function VacancyCandidatesSection({
           </p>
         </>
       )}
-      <ul>
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {data.candidates.map((c) => (
-          <li key={c.id}>
+          <li key={c.id} className="rounded-cartao bg-white p-4">
             {c.waitlist_position != null && (
               <Badge>{`${c.waitlist_position}º na lista de espera`}</Badge>
-            )}{' '}
-            {c.photo_url && <img src={c.photo_url} alt={`Foto de ${c.name}`} width={48} height={48} />}
-            <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}
+            )}
+            <div className="flex items-center gap-3">
+              <Avatar src={c.photo_url} name={c.name} className="size-12" />
+              <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}
+            </div>
             <p>
               {c.completed_shifts} turnos concluídos · {c.no_shows_30d ?? 0}{' '}
               {(c.no_shows_30d ?? 0) === 1 ? 'falta' : 'faltas'} nos últimos{' '}

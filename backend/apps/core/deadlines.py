@@ -114,9 +114,15 @@ def process_deadlines(now=None):
     )
 
     # 8. Finalização das vagas.
-    in_progress = Vacancy.objects.filter(status=V.IN_PROGRESS).filter(
-        Q(reopened=False) | Q(ends_at__lte=now)
-    )
+    # Só as que já podem fechar: uma vaga com turno à espera de validação não é erro, e
+    # tentar finalizá-la a cada execução só enchia o log de avisos.
+    in_progress = [
+        vacancy
+        for vacancy in Vacancy.objects.filter(status=V.IN_PROGRESS).filter(
+            Q(reopened=False) | Q(ends_at__lte=now)
+        )
+        if vacancies.can_finalize(vacancy, now)
+    ]
     _apply(
         done, "vagas_finalizadas", in_progress, lambda v: vacancies.finalize_vacancy(v, now=now)
     )

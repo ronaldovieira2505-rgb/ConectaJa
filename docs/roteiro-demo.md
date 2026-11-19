@@ -24,10 +24,20 @@ Senha de todos os usuários de exemplo: `Demo@12345`.
 | Admin (`/admin`) | `admin@exemplo.com` |
 | Empresa aprovada | `empresa1@exemplo.com`, `empresa2@exemplo.com`, `empresa3@exemplo.com`, `empresa4@exemplo.com` |
 | Empresa pendente na fila | `empresa.pendente@exemplo.com` |
-| Prestador aprovado (com PIX) | `prestador1@exemplo.com`, `prestador2@exemplo.com`, `prestador3@exemplo.com` |
+| Prestador aprovado (com PIX) | `prestador1@exemplo.com` a `prestador6@exemplo.com` |
 | Prestador pendente na fila | `prestador.pendente@exemplo.com` |
 
-O `seed_demo` também cadastra um catálogo de 10 anúncios publicados (obra, limpeza, varejo, eventos, fotografia, carga e descarga e outros), um deles com o selo "Urgente", para a busca não ficar vazia. Os dados de exemplo são fictícios (CPFs e CNPJs válidos gerados, e-mails `@exemplo.com`). Rodar `seed_demo` de novo não duplica nada.
+O `seed_demo` simula a plataforma em uso há algumas semanas, para as telas não aparecerem vazias. Os dados são fictícios (CPFs e CNPJs válidos gerados, e-mails `@exemplo.com`, logos e fotos de perfil com iniciais) e rodar de novo não duplica nada.
+
+| Onde olhar | O que já está lá |
+|---|---|
+| Página inicial e busca | 14 vagas futuras em 7 categorias, uma com o selo "Urgente" |
+| `prestador1` (Ana Paula Ribeiro) | 5 turnos pagos (R$ 809,95 na carteira), nota 4,8, um turno confirmado amanhã, uma candidatura pendente e o turno "Pintura de muro e fachada" esperando ela avaliar a empresa (US64) |
+| `prestador2` (Bruno Henrique Costa) | 1 falta nos últimos 30 dias: uma segunda falta no roteiro abaixo gera a suspensão automática |
+| `empresa1` (Armazéns Paulista) | Em "Confirmar presença", 2 prestadores com horas para aprovar ou contestar (US56/US57) |
+| `empresa2` (Eventos Centro) | "Apoio de salão em evento corporativo" com 4 candidatos com nota, turnos e faltas (US40); "Fotógrafo para lançamento de produto" com 1 pessoa na lista de espera (US43); "Recepção em evento de premiação" esperando a empresa avaliar os prestadores (US63) |
+| Admin, "Transições de estado" → "Indicadores" | Taxa de preenchimento, índice de faltas e valores das últimas semanas (US78) |
+| Admin, histórico de um turno | Qualquer vaga finalizada mostra a linha do tempo completa (US75), incluindo a contestação de "Operador de caixa para feirão de ofertas" |
 
 ## Simular a localização no navegador (check-in)
 
@@ -51,7 +61,7 @@ Os passos 2 a 4 podem usar os cadastros novos que você fizer na hora ou os pend
 7. **Candidaturas.** Candidate-se com `prestador1@exemplo.com` (prestador A) e `prestador2@exemplo.com` (prestador B) e acompanhe o status em "Meus trabalhos". As candidaturas fecham 1 min antes do início.
 8. **Aprovação.** Como empresa, aprove os dois candidatos antes do encerramento.
 9. **Check-in.** No horário, o prestador A simula a localização da vaga (DevTools → Sensors, veja acima) e faz o check-in, a até 150 m.
-10. **Falta.** O prestador B não comparece. Em até 2 min depois do início, o `processar_prazos` registra a falta, reabre a posição e avisa a empresa.
+10. **Falta.** O prestador B não comparece. Em até 2 min depois do início, o `processar_prazos` registra a falta, reabre a posição e avisa a empresa. Como o `prestador2` já tem uma falta no histórico, esta é a segunda em 30 dias e a conta dele fica suspensa por 15 dias.
 11. **Check-out e confirmação.** O prestador A faz o check-out. A empresa confirma a presença, ou espera os 2 min da janela de contestação para a aprovação automática.
 12. **Carteira e auditoria.** A carteira do prestador A mostra R$ 97,00 liberados. No admin, veja a trilha de auditoria ("Transições de estado") e o estorno da posição não usada.
 

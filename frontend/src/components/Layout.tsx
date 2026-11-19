@@ -16,18 +16,18 @@ import { useAuth } from '../authContext'
 import NotificationBell from './NotificationBell'
 import { Alert, Button } from './ui'
 
-const MENU: Record<Role, { to: string; label: string; icon: LucideIcon }[]> = {
+const MENU: Record<Role, { to: string; label: string; short: string; icon: LucideIcon }[]> = {
   COMPANY: [
-    { to: '/empresa/vagas', label: 'Minhas vagas', icon: ClipboardList },
-    { to: '/empresa/confirmar-presenca', label: 'Confirmar presença', icon: ClipboardCheck },
-    { to: '/empresa/avaliacoes', label: 'Avaliações', icon: Star },
-    { to: '/empresa/perfil', label: 'Perfil da empresa', icon: Building2 },
+    { to: '/empresa/vagas', label: 'Minhas vagas', short: 'Vagas', icon: ClipboardList },
+    { to: '/empresa/confirmar-presenca', label: 'Confirmar presença', short: 'Presença', icon: ClipboardCheck },
+    { to: '/empresa/avaliacoes', label: 'Avaliações', short: 'Avaliações', icon: Star },
+    { to: '/empresa/perfil', label: 'Perfil da empresa', short: 'Perfil', icon: Building2 },
   ],
   WORKER: [
-    { to: '/vagas', label: 'Buscar vagas', icon: Search },
-    { to: '/meus-trabalhos', label: 'Meus trabalhos', icon: Briefcase },
-    { to: '/carteira', label: 'Carteira', icon: Wallet },
-    { to: '/prestador/perfil', label: 'Meu perfil', icon: UserRound },
+    { to: '/vagas', label: 'Buscar vagas', short: 'Buscar', icon: Search },
+    { to: '/meus-trabalhos', label: 'Meus trabalhos', short: 'Trabalhos', icon: Briefcase },
+    { to: '/carteira', label: 'Carteira', short: 'Carteira', icon: Wallet },
+    { to: '/prestador/perfil', label: 'Meu perfil', short: 'Perfil', icon: UserRound },
   ],
   ADMIN: [],
 }
@@ -65,12 +65,20 @@ export default function Layout() {
         Ir para o conteúdo
       </a>
       <header className="app-header">
+        {user && (
+          <Link to="/" className="app-brand app-brand-logado">
+            Conecta Já
+          </Link>
+        )}
         {user ? (
           <nav className="app-nav" aria-label="Menu principal">
             {MENU[user.role].map((item) => (
-              <NavLink key={item.to} to={item.to}>
+              <NavLink key={item.to} to={item.to} aria-label={item.label}>
                 <item.icon className="app-nav-icone" aria-hidden="true" />
-                {item.label}
+                <span className="rotulo-longo">{item.label}</span>
+                <span className="rotulo-curto" aria-hidden="true">
+                  {item.short}
+                </span>
               </NavLink>
             ))}
             {user.role === 'ADMIN' && <a href="/admin/">Painel administrativo</a>}
@@ -101,9 +109,11 @@ export default function Layout() {
           )}
         </div>
       </header>
-      <Link to="/" className="app-brand">
-        Conecta Já
-      </Link>
+      {!user && (
+        <Link to="/" className="app-brand">
+          Conecta Já
+        </Link>
+      )}
       <main className={isLanding ? 'app-main app-main-larga' : 'app-main'} id="conteudo">
         {user?.role === 'COMPANY' && user.verification_status === 'PENDENTE' && (
           <Alert tone="info">

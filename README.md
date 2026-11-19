@@ -57,12 +57,14 @@ Com o backend configurado (variáveis acima), rode uma vez:
 python backend\manage.py seed_demo
 ```
 
-Cria 14 vagas (13 publicadas e pagas em custódia no PSP simulado, 1 aguardando pagamento) em
-várias categorias e bairros de São Paulo, incluindo uma "Urgente". Cria também empresas,
-prestadores e um admin. Senha de todas as contas: `Demo@12345`. A lista de e-mails aparece no
-final do comando e em `docs/roteiro-demo.md`. As vagas começam de 1 a 7 dias depois do dia em
-que o comando roda. Rodar de novo não duplica nada; para recomeçar do zero com SQLite, apague o
-`db.sqlite3` e rode `migrate` e o comando.
+Simula a plataforma em uso há algumas semanas: 4 empresas aprovadas (com logo e apresentação),
+6 prestadores aprovados (com foto, documentos e PIX), 13 turnos já realizados e pagos nas
+últimas 6 semanas (com avaliações nos dois sentidos, uma falta e uma contestação resolvida),
+1 turno aguardando a empresa confirmar as horas, 14 vagas futuras (uma "Urgente") e
+candidaturas em aberto, incluindo uma lista de espera. A carteira, as avaliações e os
+indicadores do admin já aparecem preenchidos. Senha de todas as contas: `Demo@12345`; a lista
+de e-mails aparece no final do comando e em `docs/roteiro-demo.md`. Rodar de novo não duplica
+nada; para recomeçar do zero com SQLite, apague o `db.sqlite3` e rode `migrate` e o comando.
 
 ## Frontend
 
@@ -96,9 +98,8 @@ python backend\manage.py seed_demo
 python backend\manage.py seed_demo --prazos-curtos
 ```
 
-Cria 1 admin, 4 empresas aprovadas, 3 prestadores aprovados (com PIX), 1 empresa e 1 prestador
-pendentes na fila e 14 vagas (13 publicadas, uma delas "Urgente"), em São Paulo. É seguro rodar
-de novo: não duplica dados. Com `--prazos-curtos`, os prazos ficam em minutos para a demonstração ao vivo.
+Cria os dados descritos em "Dados de exemplo" acima. É seguro rodar de novo: não duplica dados.
+Com `--prazos-curtos`, os prazos ficam em minutos para a demonstração ao vivo.
 As credenciais aparecem no terminal ao final:
 
 | Perfil | E-mail | Senha |
@@ -106,7 +107,7 @@ As credenciais aparecem no terminal ao final:
 | Admin (`/admin`) | `admin@exemplo.com` | `Demo@12345` |
 | Empresas aprovadas | `empresa1@exemplo.com` a `empresa4@exemplo.com` | `Demo@12345` |
 | Empresa pendente | `empresa.pendente@exemplo.com` | `Demo@12345` |
-| Prestadores aprovados | `prestador1@exemplo.com`, `prestador2@exemplo.com`, `prestador3@exemplo.com` | `Demo@12345` |
+| Prestadores aprovados | `prestador1@exemplo.com` a `prestador6@exemplo.com` | `Demo@12345` |
 | Prestador pendente | `prestador.pendente@exemplo.com` | `Demo@12345` |
 
 O passo a passo da apresentação está em `docs/roteiro-demo.md`.

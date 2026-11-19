@@ -80,13 +80,16 @@ export default function PendingAssignmentsSection({
 
   return (
     <section aria-labelledby="confirmar-titulo">
-      <h2 id="confirmar-titulo">Confirmar presença</h2>
+      {/* Na página própria o título já está no topo; aqui fica só para leitores de tela. */}
+      <h2 id="confirmar-titulo" className={vacancyId === undefined ? 'sr-only' : undefined}>
+        Confirmar presença
+      </h2>
       {error && <Alert tone="error">{error}</Alert>}
       {notice && <Alert tone="success">{notice}</Alert>}
       {items.length === 0 && <p>Nenhuma presença aguardando confirmação.</p>}
-      <ul>
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {items.map((a) => (
-          <li key={a.id}>
+          <li key={a.id} className="rounded-cartao bg-white p-4">
             <strong>{a.worker_first_name}</strong>
             {vacancyId === undefined && <> · {a.vacancy_title}</>}{' '}
             {a.check_out_auto && <Badge tone="warning">Check-out automático</Badge>}

@@ -11,14 +11,22 @@ from django.utils import timezone
 
 from apps.accounts.models import Role
 from apps.companies.models import Company
-from apps.core.models import PlatformParameters
+from apps.core.deadlines import process_deadlines
+from apps.core.models import Notification, PlatformParameters
 from apps.core.validators import is_valid_cnpj, is_valid_cpf
-from apps.vacancies.models import Assignment, Vacancy
+from apps.payments.models import Custody, LedgerEntry
+from apps.vacancies.models import Application, Assignment, Review, Vacancy
 from apps.workers.models import Worker
 
 pytestmark = pytest.mark.django_db
 
 User = get_user_model()
+
+
+@pytest.fixture(autouse=True)
+def private_media(settings, tmp_path):
+    # Logos e documentos de exemplo vão para uma pasta temporária, não para o repositório.
+    settings.PRIVATE_MEDIA_ROOT = tmp_path / "private"
 
 
 def run_seed(*args):
@@ -35,17 +43,17 @@ def test_creates_demo_data_on_empty_database():
     assert approved_companies.count() == 4
     assert Company.objects.filter(verification_status="PENDENTE").count() == 1
     approved_workers = Worker.objects.filter(verification_status="APROVADO")
-    assert approved_workers.count() == 3
+    assert approved_workers.count() == 6
     assert all(w.pix_key for w in approved_workers)
     assert Worker.objects.filter(verification_status="EM_ANALISE").count() == 1
 
     vacancies = Vacancy.objects.all()
-    assert vacancies.count() == 14
+    assert vacancies.count() == 28
     assert len({v.status for v in vacancies}) >= 2
     for vacancy in vacancies:
         assert -24.1 < float(vacancy.latitude) < -23.2
         assert -46.9 < float(vacancy.longitude) < -46.3
-    assert Assignment.objects.filter(status="CONFIRMADA").count() == 1
+    assert Assignment.objects.filter(status="CONFIRMADA").count() == 3
 
     assert "admin@exemplo.com" in output
     assert "Demo@12345" in output
@@ -131,5 +139,66 @@ def test_catalog_respects_lead_time_when_run_at_night():
         run_seed()
 
     lead = timedelta(minutes=PlatformParameters.get().min_publish_lead_minutes)
-    assert Vacancy.objects.count() == 14
-    assert all(v.starts_at >= night + lead for v in Vacancy.objects.all())
+    future = Vacancy.objects.filter(
+        status__in=[Vacancy.Status.PUBLISHED, Vacancy.Status.AWAITING_PAYMENT]
+    )
+    assert future.count() == 14
+    assert all(v.starts_at >= night + lead for v in future)
+
+
+def test_history_has_paid_shifts_reviews_a_no_show_and_hours_to_confirm():
+    run_seed()
+
+    assert Vacancy.objects.filter(status=Vacancy.Status.FINISHED).count() >= 12
+    assert Assignment.objects.filter(status=Assignment.Status.PAID).count() >= 25
+    assert Assignment.objects.filter(status=Assignment.Status.NO_SHOW).count() == 1
+    assert Assignment.objects.filter(status=Assignment.Status.AWAITING_VALIDATION).count() == 2
+    assert Review.objects.count() >= 40
+    assert all(v.starts_at < timezone.now() for v in Vacancy.objects.filter(status="FINALIZADA"))
+    # Turnos recentes ainda sem avaliação, para demonstrar a US63 e a US64 ao vivo.
+    recent = Assignment.objects.filter(status="PAGA", vacancy__title="Pintura de muro e fachada")
+    assert recent.exists() and not Review.objects.filter(
+        assignment__in=recent, direction=Review.Direction.WORKER_TO_COMPANY
+    ).exists()
+
+
+def test_history_keeps_every_closed_custody_balanced():
+    run_seed()
+
+    for custody in Custody.objects.filter(status="ENCERRADA"):
+        totals = {}
+        for entry in custody.entries.all():
+            totals[entry.kind] = totals.get(entry.kind, 0) + entry.amount_cents
+        retained = totals.get(LedgerEntry.Kind.RETENTION, 0)
+        released = sum(
+            totals.get(kind, 0)
+            for kind in (
+                LedgerEntry.Kind.WORKER_PAYOUT,
+                LedgerEntry.Kind.PLATFORM_FEE,
+                LedgerEntry.Kind.COMPANY_REFUND,
+            )
+        )
+        assert retained == released
+
+
+def test_history_does_not_flood_the_notification_bell():
+    run_seed()
+
+    assert Notification.objects.count() < 30
+
+
+def test_open_applications_show_ratings_and_a_waitlist():
+    run_seed()
+
+    pending = Application.objects.filter(status="PENDENTE")
+    assert pending.filter(vacancy__title="Apoio de salão em evento corporativo").count() == 4
+    assert pending.filter(vacancy__title="Fotógrafo para lançamento de produto").count() == 1
+
+
+def test_deadline_processing_after_seed_logs_no_warnings(caplog):
+    run_seed()
+
+    with caplog.at_level("WARNING", logger="apps.core.deadlines"):
+        process_deadlines()
+
+    assert not caplog.records
