@@ -15,6 +15,7 @@ import CompanyAbout from '../components/CompanyAbout'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
 import FavoriteButton from '../components/FavoriteButton'
+import ReportLink from '../components/ReportLink'
 import EquipmentLists from '../components/EquipmentLists'
 
 /** Detalhe da vaga para o prestador: o essencial à vista e o restante em "ver mais" (US17). */
@@ -152,6 +153,14 @@ export default function VacancyPublicDetailPage() {
           <CompanyAbout company={vacancy.company} showProfileLink heading="h3" />
         </section>
       )}
+      <p className="mt-6">
+        <ReportLink
+          targetType="VAGA"
+          targetId={vacancy.id}
+          role="WORKER"
+          ariaLabel="Denunciar esta vaga"
+        />
+      </p>
       <details className="ver-mais">
         <summary>Ver mais sobre a vaga</summary>
         <h2>O serviço</h2>
