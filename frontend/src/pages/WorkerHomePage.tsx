@@ -13,6 +13,7 @@ import {
 import Avatar from '../components/Avatar'
 import DeleteAccountCard from '../components/DeleteAccountCard'
 import HistoryItem from '../components/HistoryItem'
+import PortfolioCard from '../components/PortfolioCard'
 import SkillsCard from '../components/SkillsCard'
 import { Alert, Badge, Card, Loading } from '../components/ui'
 import type { Tone } from '../status'
@@ -171,6 +172,11 @@ export default function WorkerHomePage() {
       )}
 
       <SkillsCard profile={profile} onSaved={setProfile} />
+
+      <PortfolioCard
+        photos={profile.portfolio ?? []}
+        onChange={(photos) => setProfile({ ...profile, portfolio: photos })}
+      />
 
       <Card>
         <h2>Documentos</h2>

@@ -74,6 +74,9 @@ def delete_worker_account(worker, *, password, now=None):
 
         files = [document.file for document in worker.documents.all()]
         worker.documents.all().delete()
+        # Fotos de trabalhos anteriores (US09) também podem identificar a pessoa.
+        files += [photo.file for photo in worker.portfolio.all()]
+        worker.portfolio.all().delete()
 
         worker.full_name = REMOVED_NAME
         worker.cpf = removed_cpf(worker)

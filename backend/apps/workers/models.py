@@ -135,3 +135,22 @@ class WorkerDocument(models.Model):
 
     def __str__(self):
         return f"{self.kind} do prestador #{self.worker_id}"
+
+
+class PortfolioPhoto(models.Model):
+    """Foto de um trabalho anterior do prestador (US09). Armazenamento privado, sem URL pública."""
+
+    CAPTION_MAX_LENGTH = 120
+
+    worker = models.ForeignKey(Worker, on_delete=models.CASCADE, related_name="portfolio")
+    file = models.FileField("foto", upload_to="worker_portfolio/", storage=private_storage)
+    caption = models.CharField("legenda", max_length=CAPTION_MAX_LENGTH, blank=True)
+    created_at = models.DateTimeField("enviada em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "foto de trabalho anterior"
+        verbose_name_plural = "fotos de trabalhos anteriores"
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"Foto #{self.pk} do prestador #{self.worker_id}"

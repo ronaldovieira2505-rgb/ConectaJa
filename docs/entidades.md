@@ -51,10 +51,13 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |
 | `skills` | lista de até 7 categorias de vaga em que o prestador tem experiência (US08), sem repetição |
 | `bio` | resumo da experiência, até 500 caracteres, sem e-mail nem telefone (US08) |
-| `availability`, portfólio | [pós-MVP: US09–US10] |
+| `availability` | [pós-MVP: US10] |
 
 ### WorkerDocument
 `worker`, `kind` (`DOC_FRENTE`, `DOC_VERSO`, `SELFIE`), `file` (**armazenamento privado**, nunca URL pública; acesso só pelo dono e pelo admin), `uploaded_at`.
+
+### PortfolioPhoto — foto de trabalho anterior (US09)
+`worker`, `file` (**armazenamento privado**, servido só pela API ao próprio prestador, ao admin e às empresas em que ele tem candidatura ou alocação), `caption` (até 120 caracteres), `created_at`. Até 8 por prestador; JPG, PNG ou WebP de até 5 MB.
 
 ### VerificationReview
 Decisão do admin na fila de verificação (US73): `subject_type` (`COMPANY`/`WORKER`), `subject_id`, `reviewer`, `decision` (`APROVADO`/`REJEITADO`), `reason` (obrigatório na rejeição), `created_at`.

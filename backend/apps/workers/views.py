@@ -17,7 +17,7 @@ from apps.companies.views import digits_only, first_error
 from apps.core.exceptions import DomainError
 from apps.core.masking import mask_phone
 from apps.core.validators import is_valid_cpf
-from apps.workers import profile, services, skills
+from apps.workers import portfolio, profile, services, skills
 from apps.workers.models import Worker, WorkerDocument
 
 KINDS = list(WorkerDocument.Kind)
@@ -92,6 +92,7 @@ def serialize_worker(worker):
         "reviews": profile.recent_reviews(worker),
         "skills": skills.serialize_skills(worker.skills),
         "bio": worker.bio,
+        "portfolio": portfolio.serialize_photos(worker),
         "profile_steps": steps,
         "verification_message": "Aguardando verificação" if awaiting else "",
     }
