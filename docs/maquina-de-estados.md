@@ -116,8 +116,8 @@ Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pe
 |---|---|---|---|
 | — | Prestador denuncia vaga ou empresa (US69) | `ABERTA` | Motivo da lista, descrição de 10 a 1.000 caracteres, sem outra denúncia aberta da mesma pessoa sobre o mesmo alvo. Notifica os admins; o denunciado **não** é avisado |
 | — | Empresa denuncia prestador (US70) | `ABERTA` | O prestador teve alocação numa vaga da empresa (qualquer estado). Sem outra denúncia aberta da mesma empresa sobre a mesma alocação. Notifica os admins; o prestador **não** é avisado; avaliação e pagamento do turno não mudam |
-| `ABERTA` | Admin marca "Em análise" (US74) | `EM_ANALISE` | — |
-| `ABERTA`, `EM_ANALISE` | Admin conclui (US74) | `PROCEDENTE` ou `IMPROCEDENTE` | Parecer obrigatório |
+| `ABERTA` | Admin marca "Em análise" (US74) | `EM_ANALISE` | Registrado com o admin como autor |
+| `ABERTA`, `EM_ANALISE` | Admin conclui (US74) | `PROCEDENTE` ou `IMPROCEDENTE` | Parecer obrigatório (gravado em `decision` e como motivo da transição). Notifica quem denunciou só do resultado, sem o parecer nem detalhes do outro lado. Se procedente, o admin pode suspender a conta do denunciado na mesma tela (US76) |
 
 Estados finais: `PROCEDENTE`, `IMPROCEDENTE`. Cada transição grava um `StateTransition` (`entity_type = "Report"`).
 
