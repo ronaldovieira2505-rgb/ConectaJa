@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { formatMonthYear, ratingLabel, type CompanySummary } from '../api'
 import Avatar from './Avatar'
+import PremiumBadge from './PremiumBadge'
 
 function placeOf(company: CompanySummary) {
   const city = [company.city, company.state].filter(Boolean).join('/')
@@ -14,10 +15,13 @@ function placeOf(company: CompanySummary) {
 export default function CompanyAbout({
   company,
   showProfileLink = false,
+  showPremium = true,
   heading: Heading = 'h2',
 }: {
   company: CompanySummary
   showProfileLink?: boolean
+  // O detalhe da vaga já mostra o selo ao lado do nome, no topo (US66).
+  showPremium?: boolean
   heading?: 'h1' | 'h2' | 'h3'
 }) {
   const place = placeOf(company)
@@ -28,6 +32,7 @@ export default function CompanyAbout({
         <Avatar src={company.logo_url} name={company.name} kind="company" className="size-16" />
         <div className="flex min-w-[10rem] flex-1 flex-col gap-1">
           <Heading className="m-0 text-[17px] leading-6 tracking-normal">{company.name}</Heading>
+          {showPremium && company.premium && <PremiumBadge />}
           {place && <p className="m-0 text-[13px] leading-5 text-tinta-media">{place}</p>}
           <p className="m-0 text-[13px] leading-5 text-tinta-media">
             Na plataforma desde {formatMonthYear(company.member_since)}

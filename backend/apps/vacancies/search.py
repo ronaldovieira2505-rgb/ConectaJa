@@ -177,6 +177,7 @@ def serialize_card(vacancy, distance_m=None, params=None, ratings=None, favorite
         "distance_km": None if distance_m is None else round(distance_m / 1000, 1),
         "photo_url": photo_url(vacancy),
         "company_rating": rating,
+        "company_premium": vacancy.company.premium,
         "favorite": vacancy.pk in (favorites or ()),
     }
 

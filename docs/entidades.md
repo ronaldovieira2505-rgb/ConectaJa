@@ -35,6 +35,7 @@ Login por **e-mail + senha** (e-mail único, case-insensitive). Campo `role`: `C
 | `description` | descrição da empresa exibida ao prestador [pós-MVP: US15] |
 | `suspended_until` | fim da suspensão manual do admin (US76); vazio = sem suspensão com data |
 | `suspension_indefinite` | `true` = suspensa por tempo indeterminado (sem data de fim); só a reativação encerra |
+| `premium`, `premium_since` | selo de contratante premium (US66), calculado pelo `processar_prazos`; não se edita à mão |
 
 ### CompanyMember
 Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: US03]. Nunca compartilhar login.

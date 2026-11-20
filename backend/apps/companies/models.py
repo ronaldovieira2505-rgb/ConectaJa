@@ -62,6 +62,12 @@ class Company(models.Model):
         default=False,
         help_text="Suspensão manual do admin sem data de fim; só termina com a reativação.",
     )
+    premium = models.BooleanField(
+        "contratante premium",
+        default=False,
+        help_text="Selo calculado pelo processar_prazos (US66); não se edita à mão.",
+    )
+    premium_since = models.DateTimeField("premium desde", null=True, blank=True)
     created_at = models.DateTimeField("criada em", auto_now_add=True)
 
     class Meta:

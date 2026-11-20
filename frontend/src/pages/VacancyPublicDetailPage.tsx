@@ -15,6 +15,7 @@ import CompanyAbout from '../components/CompanyAbout'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
 import FavoriteButton from '../components/FavoriteButton'
+import PremiumBadge from '../components/PremiumBadge'
 import ReportLink from '../components/ReportLink'
 import EquipmentLists from '../components/EquipmentLists'
 
@@ -107,6 +108,11 @@ export default function VacancyPublicDetailPage() {
       <p className="sub">
         {vacancy.company_name} · {ratingLabel(vacancy.company_rating)}
       </p>
+      {(vacancy.company_premium || vacancy.company?.premium) && (
+        <p className="m-0">
+          <PremiumBadge />
+        </p>
+      )}
       <dl className="fatos">
         <div className="fato-destaque">
           <dt>Você recebe</dt>
@@ -150,7 +156,7 @@ export default function VacancyPublicDetailPage() {
       {vacancy.company && (
         <section aria-labelledby="sobre-a-empresa" className="mt-6 border-t border-regua pt-6">
           <h2 id="sobre-a-empresa">Sobre a empresa</h2>
-          <CompanyAbout company={vacancy.company} showProfileLink heading="h3" />
+          <CompanyAbout company={vacancy.company} showProfileLink showPremium={false} heading="h3" />
         </section>
       )}
       <p className="mt-6">

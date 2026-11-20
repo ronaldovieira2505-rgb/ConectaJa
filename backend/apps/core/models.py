@@ -70,6 +70,16 @@ class PlatformParameters(models.Model):
     level_gold_rating = models.DecimalField(
         "nível Ouro: nota mínima", max_digits=2, decimal_places=1, default=Decimal("4.7")
     )
+    # Selo de contratante premium (US66).
+    premium_min_paid_shifts = models.PositiveIntegerField(
+        "contratante premium: turnos pagos", default=10
+    )
+    premium_min_rating = models.DecimalField(
+        "contratante premium: nota mínima", max_digits=2, decimal_places=1, default=Decimal("4.5")
+    )
+    premium_window_days = models.PositiveIntegerField(
+        "contratante premium: janela de contestações e denúncias (dias)", default=90
+    )
     worker_fee_percent = models.DecimalField(
         "taxa retida do prestador (%)", max_digits=5, decimal_places=2, default=Decimal("3")
     )

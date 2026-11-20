@@ -293,6 +293,8 @@ export interface VacancyCard {
   id: number
   title: string
   company_name: string
+  // Selo de contratante premium (US66).
+  company_premium?: boolean
   category: string
   category_label: string
   starts_at: string
@@ -392,6 +394,7 @@ export interface CompanySummary {
   completed_shifts: number
   description: string
   profile_available: boolean
+  premium?: boolean
 }
 
 export interface CompanyPublicReview {
@@ -684,6 +687,8 @@ export interface CompanyProfile {
   logo_url: string | null
   member_since: string
   stats: CompanyStats
+  // Selo de contratante premium (US66): se tem e, se não, o que falta.
+  premium?: { active: boolean; since: string | null; missing: string[]; explanation: string }
 }
 
 /** "nov. de 2026": desde quando a conta existe. */

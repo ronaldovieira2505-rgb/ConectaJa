@@ -37,6 +37,8 @@ def company_summary(company, now=None):
         ).count(),
         "description": company.description,
         "profile_available": is_public(company, now),
+        # Selo de contratante premium (US66).
+        "premium": company.premium,
     }
 
 
