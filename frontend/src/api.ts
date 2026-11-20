@@ -296,7 +296,37 @@ export function formatDays(days: number): string {
   return days === 1 ? '1 dia' : `${days} dias`
 }
 
+/** O que o prestador vê da empresa (US15): sem CNPJ, contato, endereço completo ou valores. */
+export interface CompanySummary {
+  id: number
+  name: string
+  logo_url: string | null
+  district: string
+  city: string
+  state: string
+  member_since: string
+  rating: CompanyRating
+  completed_shifts: number
+  description: string
+  profile_available: boolean
+}
+
+export interface CompanyPublicReview {
+  id: number
+  rating: number
+  comment: string
+  created_at: string
+  reviewer: string
+}
+
+/** Página pública da empresa (US15). */
+export interface CompanyPublicProfile extends CompanySummary {
+  open_vacancies: VacancyCard[]
+  recent_reviews: CompanyPublicReview[]
+}
+
 export interface VacancyPublicDetail extends VacancyCard {
+  company?: CompanySummary
   rules: VacancyRules
   description: string
   street: string

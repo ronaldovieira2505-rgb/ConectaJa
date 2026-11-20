@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import { Loading } from './components/ui'
 import CompanyConfirmPresencePage from './pages/CompanyConfirmPresencePage'
 import CompanyProfilePage from './pages/CompanyProfilePage'
+import CompanyPublicPage from './pages/CompanyPublicPage'
 import CompanyReviewsPage from './pages/CompanyReviewsPage'
 import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
@@ -50,6 +51,8 @@ export default function AppRoutes() {
         {/* Busca pública: quem não pode se candidatar vê o que falta (US12). */}
         <Route path="vagas" element={<VacancySearchPage />} />
         <Route path="vagas/:id" element={<VacancyPublicDetailPage />} />
+        {/* Perfil público da empresa, aberto a qualquer pessoa (US15). */}
+        <Route path="empresas/:id" element={<CompanyPublicPage />} />
         <Route element={<RequireRole role="COMPANY" />}>
           <Route path="empresa/vagas" element={<CompanyVacanciesPage />} />
           <Route path="empresa/vagas/nova" element={<CompanyVacancyNewPage />} />

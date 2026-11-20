@@ -11,6 +11,7 @@ import {
   type VacancyPublicDetail,
   type VacancyRules,
 } from '../api'
+import CompanyAbout from '../components/CompanyAbout'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
 
@@ -128,6 +129,12 @@ export default function VacancyPublicDetailPage() {
       )}
       {applyError && <Alert tone="error">{applyError}</Alert>}
       {vacancy.apply_blocker && !applyError && !sent && <Alert>{vacancy.apply_blocker}</Alert>}
+      {vacancy.company && (
+        <section aria-labelledby="sobre-a-empresa" className="mt-6 border-t border-regua pt-6">
+          <h2 id="sobre-a-empresa">Sobre a empresa</h2>
+          <CompanyAbout company={vacancy.company} showProfileLink heading="h3" />
+        </section>
+      )}
       <details className="ver-mais">
         <summary>Ver mais sobre a vaga</summary>
         <h2>O serviço</h2>
