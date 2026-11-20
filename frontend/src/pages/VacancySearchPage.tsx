@@ -14,6 +14,8 @@ interface Filters {
   min_pay: string
   // "Só nos meus horários" (US10): '1' ligado, '' desligado.
   my_schedule: string
+  // "Só contratantes premium" (US67): '1' ligado, '' desligado.
+  premium: string
 }
 
 const EMPTY: Filters = {
@@ -23,6 +25,7 @@ const EMPTY: Filters = {
   date_to: '',
   min_pay: '',
   my_schedule: '',
+  premium: '',
 }
 
 /** Filtros que chegam pelo endereço (busca e categorias da página inicial). */
@@ -45,6 +48,7 @@ function buildQuery(filters: Filters, origin: Origin): string {
   if (filters.date_to) params.set('date_to', filters.date_to)
   if (filters.min_pay) params.set('min_pay', String(Math.round(Number(filters.min_pay) * 100)))
   if (filters.my_schedule) params.set('my_schedule', '1')
+  if (filters.premium) params.set('premium', '1')
   if (origin) {
     params.set('lat', origin.lat.toFixed(6))
     params.set('lng', origin.lng.toFixed(6))
@@ -112,6 +116,7 @@ export default function VacancySearchPage() {
     filters.date_to,
     filters.min_pay,
     filters.my_schedule,
+    filters.premium,
   ].filter(Boolean).length
 
   const hasAnyFilter = [draft, filters].some((f) => Object.values(f).some(Boolean))
@@ -161,6 +166,14 @@ export default function VacancySearchPage() {
                   Só nos meus horários
                 </label>
               )}
+              <label className="self-end">
+                <input
+                  type="checkbox"
+                  checked={draft.premium === '1'}
+                  onChange={(e) => setDraft({ ...draft, premium: e.target.checked ? '1' : '' })}
+                />{' '}
+                Só contratantes premium
+              </label>
             </div>
           </div>
           <div className="acoes">
@@ -194,8 +207,20 @@ export default function VacancySearchPage() {
       {results && results.length === 0 && (
         <Card>
           <div className="vazio">
-            <h2>Nenhuma vaga com esses filtros</h2>
-            <p>Amplie o período, baixe o valor mínimo ou limpe os filtros.</p>
+            {filters.premium ? (
+              <>
+                <h2>Nenhuma vaga de contratante premium com esses filtros</h2>
+                <p>Desligue o filtro premium ou amplie a busca.</p>
+                <Button type="button" variant="secondary" onClick={clear}>
+                  Limpar filtros
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2>Nenhuma vaga com esses filtros</h2>
+                <p>Amplie o período, baixe o valor mínimo ou limpe os filtros.</p>
+              </>
+            )}
           </div>
         </Card>
       )}

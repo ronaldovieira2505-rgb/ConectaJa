@@ -100,6 +100,8 @@ def parse_filters(params):
     )
     # "Só nos meus horários" (US10): vale só para prestador com disponibilidade marcada.
     filters["my_schedule"] = (params.get("my_schedule") or "").lower() in ("1", "true")
+    # "Só contratantes premium" (US67): vale sem login e combina com os demais filtros.
+    filters["premium"] = (params.get("premium") or "").lower() in ("1", "true")
     return filters
 
 
@@ -121,6 +123,8 @@ def search(params, now=None, worker=None):
             if term not in haystack:
                 continue
         if filters["category"] and vacancy.category != filters["category"]:
+            continue
+        if filters["premium"] and not vacancy.company.premium:
             continue
         if schedule is not None and not schedule_matches(schedule, vacancy.starts_at):
             continue
