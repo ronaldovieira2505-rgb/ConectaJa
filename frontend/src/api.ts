@@ -136,6 +136,8 @@ export interface WorkerProfile {
   // Habilidades e experiência (US08).
   skills?: SkillTag[]
   bio?: string
+  // Fotos de trabalhos anteriores (US09).
+  portfolio?: PortfolioPhoto[]
 }
 
 export interface AppNotification {
@@ -614,4 +616,12 @@ export interface PastWorkersList {
   max_invites: number
   invites_left: number
   results: PastWorker[]
+}
+
+/** Foto de trabalho anterior do prestador (US09), servida só pela API. */
+export interface PortfolioPhoto {
+  id: number
+  caption: string
+  url: string
+  created_at?: string
 }
