@@ -115,6 +115,7 @@ Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pe
 | De | Evento / ator | Para | Condições e efeitos |
 |---|---|---|---|
 | — | Prestador denuncia vaga ou empresa (US69) | `ABERTA` | Motivo da lista, descrição de 10 a 1.000 caracteres, sem outra denúncia aberta da mesma pessoa sobre o mesmo alvo. Notifica os admins; o denunciado **não** é avisado |
+| — | Empresa denuncia prestador (US70) | `ABERTA` | O prestador teve alocação numa vaga da empresa (qualquer estado). Sem outra denúncia aberta da mesma empresa sobre a mesma alocação. Notifica os admins; o prestador **não** é avisado; avaliação e pagamento do turno não mudam |
 | `ABERTA` | Admin marca "Em análise" (US74) | `EM_ANALISE` | — |
 | `ABERTA`, `EM_ANALISE` | Admin conclui (US74) | `PROCEDENTE` ou `IMPROCEDENTE` | Parecer obrigatório |
 

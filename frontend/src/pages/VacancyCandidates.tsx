@@ -12,6 +12,7 @@ import {
 import Avatar from '../components/Avatar'
 import CancelReasonForm from '../components/CancelReasonForm'
 import OvertimeRequestForm from '../components/OvertimeRequestForm'
+import ReportLink from '../components/ReportLink'
 import PortfolioThumbs from '../components/PortfolioThumbs'
 import { Alert, Badge, Button } from '../components/ui'
 
@@ -249,6 +250,15 @@ export default function VacancyCandidatesSection({
                     </Button>
                   ))}
                 <OvertimeStatus member={m} />
+                <p className="m-0">
+                  <ReportLink
+                    targetType="PRESTADOR"
+                    targetId={m.id}
+                    role="COMPANY"
+                    label="Denunciar prestador"
+                    ariaLabel={`Denunciar ${m.first_name}`}
+                  />
+                </p>
                 {m.can_request_overtime &&
                   (askingOvertime === m.id ? (
                     <OvertimeRequestForm
