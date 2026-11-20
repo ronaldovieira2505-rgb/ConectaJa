@@ -138,6 +138,8 @@ export interface WorkerProfile {
   bio?: string
   // Fotos de trabalhos anteriores (US09).
   portfolio?: PortfolioPhoto[]
+  // Disponibilidade (US10).
+  availability?: { days: string[]; periods: string[]; summary: string }
 }
 
 export interface AppNotification {
@@ -210,6 +212,8 @@ export interface Candidate {
   bio?: string
   // Fotos de trabalhos anteriores (US41).
   portfolio?: PortfolioPhoto[]
+  // Disponibilidade (US10), ex.: "Seg–Sex · manhã e tarde".
+  availability_summary?: string
   applied_at: string
   // Posição na lista de espera (US43); null enquanto a equipe não está completa.
   waitlist_position?: number | null

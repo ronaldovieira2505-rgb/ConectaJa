@@ -12,6 +12,7 @@ from apps.vacancies import review_services as reviews
 from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
+from apps.workers.availability import summary as availability_summary
 from apps.workers.models import Worker, WorkerDocument
 from apps.workers.portfolio import serialize_photos
 from apps.workers.skills import serialize_skills
@@ -49,6 +50,8 @@ def serialize_candidate(application, params=None):
         "bio": worker.bio,
         # Fotos de trabalhos anteriores (US41), servidas só pela API.
         "portfolio": serialize_photos(worker),
+        # Disponibilidade (US10), só informativa: "Seg–Sex · manhã e tarde".
+        "availability_summary": availability_summary(worker),
         "applied_at": application.created_at.isoformat(),
     }
 

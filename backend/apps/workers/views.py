@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.contrib.auth import login
+from django.db import transaction
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -17,7 +18,7 @@ from apps.companies.views import digits_only, first_error
 from apps.core.exceptions import DomainError
 from apps.core.masking import mask_phone
 from apps.core.validators import is_valid_cpf
-from apps.workers import portfolio, profile, services, skills
+from apps.workers import availability, portfolio, profile, services, skills
 from apps.workers.models import Worker, WorkerDocument
 
 KINDS = list(WorkerDocument.Kind)
@@ -93,6 +94,7 @@ def serialize_worker(worker):
         "skills": skills.serialize_skills(worker.skills),
         "bio": worker.bio,
         "portfolio": portfolio.serialize_photos(worker),
+        "availability": availability.serialize(worker),
         "profile_steps": steps,
         "verification_message": "Aguardando verificação" if awaiting else "",
     }
@@ -124,7 +126,8 @@ class WorkerRegisterView(APIView):
         return Response(serialize_worker(worker), status=201)
 
 
-PROFILE_FIELDS = {"skills", "bio"}
+SKILL_FIELDS = {"skills", "bio"}
+PROFILE_FIELDS = SKILL_FIELDS | set(availability.FIELDS)
 
 
 class WorkerMeView(APIView):
@@ -139,19 +142,31 @@ class WorkerMeView(APIView):
 
     @method_decorator(csrf_protect)
     def patch(self, request):
-        """Habilidades e resumo da experiência (US08). Só os campos enviados mudam."""
+        """Habilidades e resumo (US08) e disponibilidade (US10). Só os campos enviados mudam."""
         worker = worker_or_403(request)
         if worker is None:
             return Response({"detail": RESTRICTED}, status=403)
-        changes = {key: value for key, value in request.data.items() if key in PROFILE_FIELDS}
         if set(request.data) - PROFILE_FIELDS:
             return Response(
-                {"detail": "Aqui só é possível alterar as habilidades e o resumo."}, status=400
+                {
+                    "detail": "Aqui só é possível alterar as habilidades, o resumo "
+                    "e a disponibilidade."
+                },
+                status=400,
+            )
+        changes = dict(request.data.items())
+        if not changes:
+            return Response(
+                {"detail": "Informe as habilidades ou o resumo, ou a disponibilidade."}, status=400
             )
         try:
-            worker = skills.update_skills(worker, changes)
+            with transaction.atomic():  # erro em qualquer campo: nada é salvo
+                if set(changes) & SKILL_FIELDS:
+                    skills.update_skills(worker, changes)
+                availability.update_availability(worker, changes)
         except DomainError as error:
             return Response({"detail": str(error)}, status=400)
+        worker.refresh_from_db()
         return Response(serialize_worker(worker))
 
 

@@ -26,6 +26,7 @@ from apps.vacancies import equipment as equipment_rules
 from apps.vacancies import favorites, photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
 from apps.vacancies.review_services import company_rating_summary
+from apps.workers.availability import has_availability
 from integrations.payments import PaymentGatewayError
 
 PENDING_COMPANY = "Cadastro em análise"
@@ -186,8 +187,9 @@ class PublicReadMixin:
 class VacancyCreateView(PublicReadMixin, CompanyAreaView):
     def get(self, request):
         """Busca: ?q=&category=&date_from=&date_to=&min_pay=&lat=&lng= (US12/13/14/17)."""
+        worker = getattr(request.user, "worker", None) if request.user.is_authenticated else None
         try:
-            found = search.search(request.query_params)
+            found = search.search(request.query_params, worker=worker)
         except DomainError as error:
             return Response({"detail": str(error)}, status=400)
         params = PlatformParameters.get()
@@ -197,7 +199,9 @@ class VacancyCreateView(PublicReadMixin, CompanyAreaView):
             {
                 "results": [
                     search.serialize_card(v, d, params, ratings, favorites=mine) for v, d in found
-                ]
+                ],
+                # Mostra o filtro "Só nos meus horários" só para quem marcou disponibilidade.
+                "my_schedule_available": bool(worker and has_availability(worker)),
             }
         )
 

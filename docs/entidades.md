@@ -51,7 +51,7 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |
 | `skills` | lista de até 7 categorias de vaga em que o prestador tem experiência (US08), sem repetição |
 | `bio` | resumo da experiência, até 500 caracteres, sem e-mail nem telefone (US08) |
-| `availability` | [pós-MVP: US10] |
+| `availability_days`, `availability_periods` | dias (`SEG` a `DOM`) e faixas (`MANHA` 6h–12h, `TARDE` 12h–18h, `NOITE` 18h–6h) em que o prestador costuma trabalhar (US10); só informativo |
 
 ### WorkerDocument
 `worker`, `kind` (`DOC_FRENTE`, `DOC_VERSO`, `SELFIE`), `file` (**armazenamento privado**, nunca URL pública; acesso só pelo dono e pelo admin), `uploaded_at`.
