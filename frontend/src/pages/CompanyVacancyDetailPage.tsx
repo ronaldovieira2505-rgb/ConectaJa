@@ -10,6 +10,7 @@ import VacancyCover from '../components/VacancyCover'
 import { equipmentLabel, type EquipmentEntry } from '../equipment'
 import { badgeToneFor, toneFor } from '../status'
 import PendingAssignmentsSection from './PendingAssignments'
+import InviteWorkersSection from './InviteWorkers'
 import VacancyCandidatesSection from './VacancyCandidates'
 
 const METHODS: Record<string, string> = { PIX: 'PIX', BOLETO: 'boleto', CARTAO: 'cartão' }
@@ -316,6 +317,9 @@ export default function CompanyVacancyDetailPage() {
           </details>
           {['PUBLICADA', 'CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
             <VacancyCandidatesSection vacancyId={vacancy.id} onChange={refreshVacancy} />
+          )}
+          {['PUBLICADA', 'CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
+            <InviteWorkersSection vacancyId={vacancy.id} />
           )}
           {['CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
             <PendingAssignmentsSection vacancyId={vacancy.id} onChange={refreshVacancy} />

@@ -1,8 +1,23 @@
 from django.urls import path
 
-from . import candidate_views, validation_views, views, worker_views
+from . import candidate_views, invite_views, validation_views, views, worker_views
 
 urlpatterns = [
+    path(
+        "company/past-workers/",
+        invite_views.CompanyPastWorkersView.as_view(),
+        name="company-past-workers",
+    ),
+    path(
+        "company/workers/<int:worker_id>/photo/",
+        invite_views.CompanyWorkerPhotoView.as_view(),
+        name="company-worker-photo",
+    ),
+    path(
+        "vacancies/<int:pk>/invite/",
+        invite_views.VacancyInviteView.as_view(),
+        name="vacancy-invite",
+    ),
     path(
         "vacancies/<int:pk>/apply/",
         worker_views.VacancyApplyView.as_view(),

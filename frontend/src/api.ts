@@ -597,3 +597,21 @@ export function formatMonthYear(iso: string): string {
 export function formatCnpj(cnpj: string): string {
   return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
 }
+
+/** Quem já concluiu turno pago com a empresa, para convidar de novo (US44). */
+export interface PastWorker {
+  worker_id: number
+  name: string
+  photo_url: string | null
+  shifts_with_company: number
+  rating_given: number | null
+  invited: boolean
+  blocker: string | null
+}
+
+export interface PastWorkersList {
+  vacancy_blocker: string | null
+  max_invites: number
+  invites_left: number
+  results: PastWorker[]
+}

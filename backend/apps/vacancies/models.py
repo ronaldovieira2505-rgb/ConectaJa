@@ -305,3 +305,33 @@ class FavoriteVacancy(models.Model):
 
     def __str__(self):
         return f"Favorita #{self.pk}"
+
+
+class VacancyInvite(models.Model):
+    """Convite da empresa a um prestador que já trabalhou com ela (US44).
+
+    Não aprova ninguém: o prestador se candidata normalmente e a empresa aprova como sempre.
+    """
+
+    vacancy = models.ForeignKey(Vacancy, on_delete=models.CASCADE, related_name="invites")
+    worker = models.ForeignKey(
+        "workers.Worker", on_delete=models.CASCADE, related_name="vacancy_invites"
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="convidado por",
+    )
+    created_at = models.DateTimeField("convidado em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "convite para vaga"
+        verbose_name_plural = "convites para vagas"
+        constraints = [
+            models.UniqueConstraint(fields=["vacancy", "worker"], name="unique_vacancy_invite")
+        ]
+
+    def __str__(self):
+        return f"Convite #{self.pk}"
