@@ -28,18 +28,44 @@ export async function api<T>(
     credentials: 'same-origin',
     body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
   })
-  if (!response.ok) {
-    let detail = 'Não foi possível concluir a operação.'
-    try {
-      const data = (await response.json()) as { detail?: string }
-      if (data.detail) detail = data.detail
-    } catch {
-      // resposta sem JSON: mantém a mensagem padrão
-    }
-    throw new ApiError(response.status, detail)
-  }
+  if (!response.ok) throw await errorFrom(response)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
+}
+
+async function errorFrom(response: Response): Promise<ApiError> {
+  let detail = 'Não foi possível concluir a operação.'
+  try {
+    const data = (await response.json()) as { detail?: string }
+    if (data.detail) detail = data.detail
+  } catch {
+    // resposta sem JSON: mantém a mensagem padrão
+  }
+  return new ApiError(response.status, detail)
+}
+
+/** Baixa um arquivo da API (ex.: extrato CSV). O nome vem do `Content-Disposition`. */
+export async function downloadFile(
+  path: string,
+  fallbackName: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch(path, { credentials: 'same-origin' })
+  if (!response.ok) throw await errorFrom(response)
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  return { blob: await response.blob(), filename: match ? match[1] : fallbackName }
+}
+
+/** Entrega o arquivo ao navegador como download. */
+export function saveFile(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }
 
 export type Role = 'COMPANY' | 'WORKER' | 'ADMIN'
