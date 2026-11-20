@@ -11,6 +11,7 @@ import {
   type WorkerProfile,
 } from '../api'
 import Avatar from '../components/Avatar'
+import DeleteAccountCard from '../components/DeleteAccountCard'
 import HistoryItem from '../components/HistoryItem'
 import SkillsCard from '../components/SkillsCard'
 import { Alert, Badge, Card, Loading } from '../components/ui'
@@ -276,6 +277,8 @@ export default function WorkerHomePage() {
           </ul>
         </Card>
       )}
+
+      <DeleteAccountCard />
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import type { Role } from './api'
 import { homePathFor, useAuth } from './authContext'
 import Layout from './components/Layout'
@@ -35,9 +35,14 @@ function RequireRole({ role }: { role: Role }) {
 
 function Home() {
   const { user, loading } = useAuth()
+  const location = useLocation()
+  const accountDeleted = Boolean(
+    (location.state as { accountDeleted?: boolean } | null)?.accountDeleted,
+  )
   if (loading) return <Loading rows={1} />
   // Visitante vê a página inicial; quem já entrou vai direto para a área do seu papel.
-  return user ? <Navigate to={homePathFor(user.role)} replace /> : <LandingPage />
+  // Conta recém-excluída (US11): fica na página inicial, que encerra a sessão local.
+  return user && !accountDeleted ? <Navigate to={homePathFor(user.role)} replace /> : <LandingPage />
 }
 
 export default function AppRoutes() {
