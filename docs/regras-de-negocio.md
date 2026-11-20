@@ -73,6 +73,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 ## 6. Execução, validação e pagamento
 
 - **Check-in:** geolocalização do navegador, até 150 m do ponto da vaga. Fora do raio, a mensagem mostra a distância.
+- **Chegada sem check-in pelo celular (US51, decisões do PO):** dentro da janela de check-in e com a alocação `CONFIRMADA`, o prestador toca em "Não consigo registrar a chegada" em "Meus trabalhos", escolhe o motivo (GPS não funciona, celular sem bateria, endereço diferente do anúncio ou outro) e escreve uma explicação de até 300 caracteres (obrigatória em "Outro") (`POST /api/assignments/<id>/arrival-justification/`). É **uma justificativa por alocação**. A empresa é notificada e vê o pedido em "Confirmar presença": **"Confirmar chegada"** coloca a alocação em `EM_EXECUCAO` com o check-in no horário do pedido, marcado como confirmado pela empresa; **"Recusar"** exige motivo, avisa o prestador e mantém a alocação `CONFIRMADA`, sujeita à regra de falta (`POST /api/assignments/<id>/arrival-justification/decide/`). **Um pedido em análise não vira falta automática.** Sem resposta da empresa até o fim do turno, o pedido vai para a equipe administrativa, que decide entre presença e falta no painel.
 - **Check-out:** botão do prestador, com check-out automático como rede de segurança.
 - **Validação:** a empresa confere entrada e saída e aprova. Se não se manifestar em 24 h, a aprovação é automática.
 - **Contestação [extra]:** a empresa contesta com motivo; a equipe administrativa contata as partes e decide.

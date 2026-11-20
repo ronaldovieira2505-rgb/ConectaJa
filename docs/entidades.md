@@ -85,7 +85,13 @@ Calculados: `filled_positions` (alocações ativas), `worker_net_cents` = valor 
 ### Assignment — Alocação (o turno de um prestador)
 Criada quando a candidatura é aprovada. Campos: `vacancy`, `worker`, `application`, `status`,
 `check_in_at`, `check_in_lat`, `check_in_lng`, `check_in_distance_m`, `check_out_at`, `check_out_auto` (bool),
-`validated_at`, `validated_by` (usuário ou `SISTEMA`), `contest_response` (texto de 10 a 1.000 caracteres, resposta única do prestador à contestação, US58) e `contest_response_at` (data e hora do envio; vazio = ainda não respondeu). A resposta não é um estado novo nem uma transição.
+`check_in_confirmed_by_company` (bool, check-in confirmado pela empresa ou pelo admin a partir de uma justificativa, US51), `validated_at`, `validated_by` (usuário ou `SISTEMA`), `contest_response` (texto de 10 a 1.000 caracteres, resposta única do prestador à contestação, US58) e `contest_response_at` (data e hora do envio; vazio = ainda não respondeu). A resposta não é um estado novo nem uma transição.
+
+### ArrivalJustification — justificativa de chegada (US51)
+Uma por alocação (`assignment`, 1:1). Campos: `reason` (`GPS`, `BATERIA`, `ENDERECO`, `OUTRO`), `text` (até
+300 caracteres, obrigatório em `OUTRO`), `status` (`PENDENTE`, `COM_ADMIN`, `CONFIRMADA`, `RECUSADA`),
+`created_at` (vira o horário do check-in se confirmada), `decided_at`, `decided_by` e `decision_reason`.
+Enquanto `PENDENTE` ou `COM_ADMIN`, a falta automática não se aplica à alocação.
 
 ## Dinheiro (simulado no MVP, mesmo desenho do PSP real)
 

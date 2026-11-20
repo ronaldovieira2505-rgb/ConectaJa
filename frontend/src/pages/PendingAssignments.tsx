@@ -8,6 +8,7 @@ import {
   formatRemaining,
   formatTime,
   type ContestedAssignment,
+  type PendingArrivalJustification,
   type PendingAssignment,
 } from '../api'
 import CancelReasonForm from '../components/CancelReasonForm'
@@ -26,15 +27,20 @@ export default function PendingAssignmentsSection({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [contestingId, setContestingId] = useState<number | null>(null)
+  const [arrivals, setArrivals] = useState<PendingArrivalJustification[]>([])
+  const [refusingId, setRefusingId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const query = vacancyId !== undefined ? `?vacancy=${vacancyId}` : ''
     try {
-      const data = await api<{ results: PendingAssignment[]; contested?: ContestedAssignment[] }>(
-        `/api/company/assignments/pending/${query}`,
-      )
+      const data = await api<{
+        results: PendingAssignment[]
+        contested?: ContestedAssignment[]
+        arrival_justifications?: PendingArrivalJustification[]
+      }>(`/api/company/assignments/pending/${query}`)
       setItems(data.results)
       setContested(data.contested ?? [])
+      setArrivals(data.arrival_justifications ?? [])
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível carregar as horas a conferir.')
     }
@@ -80,6 +86,28 @@ export default function PendingAssignmentsSection({
     }
   }
 
+  async function decideArrival(assignmentId: number, confirm: boolean, reason = '') {
+    setError('')
+    setNotice('')
+    try {
+      await api(`/api/assignments/${assignmentId}/arrival-justification/decide/`, {
+        method: 'POST',
+        body: { confirm, reason },
+      })
+      setRefusingId(null)
+      setNotice(
+        confirm
+          ? 'Chegada confirmada. O turno está em execução.'
+          : 'Justificativa recusada. O prestador foi avisado.',
+      )
+      await load()
+      onChange?.()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível registrar a decisão.')
+      await load()
+    }
+  }
+
   if (!items) return error ? <Alert tone="error">{error}</Alert> : null
 
   return (
@@ -90,7 +118,63 @@ export default function PendingAssignmentsSection({
       </h2>
       {error && <Alert tone="error">{error}</Alert>}
       {notice && <Alert tone="success">{notice}</Alert>}
-      {items.length === 0 && <p>Nenhuma presença aguardando confirmação.</p>}
+      {arrivals.length > 0 && (
+        <>
+          <h3>Chegadas para confirmar</h3>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {arrivals.map((j) => (
+              <li key={j.id} className="rounded-cartao bg-white p-4">
+                <strong>{j.worker_first_name}</strong>
+                {vacancyId === undefined && <> · {j.vacancy_title}</>}{' '}
+                <Badge tone="warning">Sem check-in pelo celular</Badge>
+                <dl className="linhas">
+                  <div>
+                    <dt>Turno</dt>
+                    <dd>
+                      {formatTime(j.starts_at)} às {formatTime(j.ends_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Pedido enviado</dt>
+                    <dd>{formatTime(j.created_at)}</dd>
+                  </div>
+                  <div>
+                    <dt>Motivo</dt>
+                    <dd>{j.reason_label}</dd>
+                  </div>
+                </dl>
+                {j.text && <p>“{j.text}”</p>}
+                <p className="sub">
+                  Ao confirmar, o check-in fica registrado no horário do pedido. Sem resposta até o
+                  fim do turno, a equipe ConectaJá decide.
+                </p>
+                {refusingId === j.id ? (
+                  <CancelReasonForm
+                    label="Motivo da recusa"
+                    emptyMessage="Informe o motivo da recusa."
+                    confirmLabel="Recusar justificativa"
+                    onConfirm={(reason) => decideArrival(j.assignment_id, false, reason)}
+                    onBack={() => setRefusingId(null)}
+                  />
+                ) : (
+                  <div className="acoes">
+                    <Button onClick={() => decideArrival(j.assignment_id, true)}>
+                      Confirmar chegada
+                    </Button>
+                    <Button variant="secondary" onClick={() => setRefusingId(j.id)}>
+                      Recusar
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          {items.length > 0 && <h3>Horas a conferir</h3>}
+        </>
+      )}
+      {items.length === 0 && arrivals.length === 0 && (
+        <p>Nenhuma presença aguardando confirmação.</p>
+      )}
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {items.map((a) => (
           <li key={a.id} className="rounded-cartao bg-white p-4">

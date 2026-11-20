@@ -89,7 +89,7 @@ def auto_check_out(assignment, *, now=None):
 
 
 @transaction.atomic
-def mark_no_show(assignment, *, now=None):
+def mark_no_show(assignment, *, now=None, actor=None, reason="Sem check-in dentro da tolerância"):
     """Falta: libera a posição, reabre a vaga, avisa a empresa e avalia a suspensão."""
     now = now or timezone.now()
     was_full = waitlist.is_team_complete(assignment.vacancy)
@@ -97,7 +97,8 @@ def mark_no_show(assignment, *, now=None):
         assignment,
         ASSIGNMENT_MACHINE,
         S.NO_SHOW,
-        reason="Sem check-in dentro da tolerância",
+        actor=actor,
+        reason=reason,
         now=now,
     )
     vacancy = assignment.vacancy
