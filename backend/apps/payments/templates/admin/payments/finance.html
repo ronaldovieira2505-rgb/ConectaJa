@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a> &rsaquo;
+    <a href="{% url 'admin:payments_custody_changelist' %}">Custódias</a> &rsaquo;
+    Financeiro
+  </div>
+{% endblock %}
+{% block content %}
+  <form method="get" id="finance-filter">
+    <label>De <input type="date" name="inicio" value="{{ start|date:'Y-m-d' }}"></label>
+    <label>Até <input type="date" name="fim" value="{{ end|date:'Y-m-d' }}"></label>
+    <label>Empresa
+      <select name="empresa">
+        <option value="">Todas</option>
+        {% for company in companies %}
+          <option value="{{ company.pk }}" {% if company.pk == company_id %}selected{% endif %}>{{ company.legal_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="button">Filtrar</button>
+  </form>
+  {% for error in errors %}<p class="errornote">{{ error }}</p>{% endfor %}
+  <p>Custódias cuja retenção ocorreu no período; os valores vêm do livro-razão.</p>
+  {% if rows %}
+    <table id="finance-totals">
+      <thead>
+        <tr>
+          <th>Retido em custódia</th>
+          <th>Repassado aos prestadores</th>
+          <th>Taxa da plataforma</th>
+          <th>Estornado às empresas</th>
+          <th>Saldo ainda retido</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="retained">{{ totals.retained_display }}</td>
+          <td class="paid-out">{{ totals.paid_out_display }}</td>
+          <td class="fees">{{ totals.fees_display }}</td>
+          <td class="refunded">{{ totals.refunded_display }}</td>
+          <td class="balance">{{ totals.balance_display }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <h2>Por vaga</h2>
+    <table id="finance-rows">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Vaga</th>
+          <th>Data do turno</th>
+          <th>Retido</th>
+          <th>Repassado</th>
+          <th>Taxa</th>
+          <th>Estornado</th>
+          <th>Saldo</th>
+          <th>Custódia</th>
+          <th>Histórico</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr{% if row.diverged %} class="divergence" style="background:#fdd"{% endif %}>
+            <td>{{ row.company.legal_name }}</td>
+            <td>{{ row.vacancy.title }}</td>
+            <td>{{ row.vacancy.starts_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ row.retained_display }}</td>
+            <td>{{ row.paid_out_display }}</td>
+            <td>{{ row.fees_display }}</td>
+            <td>{{ row.refunded_display }}</td>
+            <td>{{ row.balance_display }}</td>
+            <td>{{ row.status_display }}{% if row.diverged %} — <strong>Divergência</strong>{% endif %}</td>
+            <td><a href="{% url 'admin:vacancies_vacancy_full_history' row.vacancy.pk %}">Ver histórico</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p id="finance-empty">Nenhum lançamento no período</p>
+  {% endif %}
+{% endblock %}
