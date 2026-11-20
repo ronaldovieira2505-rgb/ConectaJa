@@ -223,6 +223,12 @@ class Assignment(models.Model):
         help_text="A chegada foi confirmada pela empresa (ou pelo admin) a partir de uma "
         "justificativa do prestador (US51).",
     )
+    extended_until = models.DateTimeField(
+        "fim estendido pela hora extra",
+        null=True,
+        blank=True,
+        help_text="Novo fim do turno deste prestador depois de aceitar a hora extra (US53).",
+    )
     validated_at = models.DateTimeField("validada em", null=True, blank=True)
     validated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -171,6 +171,10 @@ def _ledger_events(vacancy):
         description = f"Livro-razão: {entry.get_kind_display()}"
         if entry.assignment_id:
             description += f" — alocação #{entry.assignment_id}"
+            if "extensao" in entry.idempotency_key or entry.idempotency_key.startswith(
+                "overtime:"
+            ):
+                description += " (hora extra)"
             if entry.kind == K.WORKER_PAYOUT:
                 worker = entry.assignment.worker
                 detail += f" para PIX {worker.masked_pix_key}"

@@ -454,6 +454,10 @@ export interface JobItem {
   can_justify_arrival?: boolean
   arrival_justification?: ArrivalJustification | null
   check_in_confirmed_by_company?: boolean
+  // Hora extra (US53): pedido da empresa, botões e o novo fim do turno.
+  overtime?: OvertimeRequest | null
+  can_respond_overtime?: boolean
+  extended_until?: string | null
 }
 
 export type ArrivalReason = 'GPS' | 'BATERIA' | 'ENDERECO' | 'OUTRO'
@@ -537,6 +541,8 @@ export interface PendingAssignment {
   check_out_auto: boolean
   check_in_distance_m: number | null
   gross_cents: number
+  // Hora extra aceita (US53): o fim previsto e o valor já a incluem.
+  overtime_minutes?: number
   auto_approve_at: string
   auto_approve_in_seconds: number
   can_contest: boolean

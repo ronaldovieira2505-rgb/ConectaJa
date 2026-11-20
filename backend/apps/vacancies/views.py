@@ -98,7 +98,7 @@ def _retained_cents(vacancy):
     totals = payments.total_by_kind(custody)
     K = LedgerEntry.Kind
     used = sum(totals.get(k, 0) for k in (K.WORKER_PAYOUT, K.PLATFORM_FEE, K.COMPANY_REFUND))
-    return custody.amount_cents - used
+    return totals.get(K.RETENTION, 0) - used
 
 
 def serialize_vacancy(vacancy):

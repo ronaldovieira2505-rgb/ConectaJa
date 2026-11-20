@@ -38,6 +38,19 @@ def total_by_kind(custody):
     return {row["kind"]: row["total"] for row in rows}
 
 
+def retained_total(custody):
+    """Tudo o que já foi retido: a vaga e as horas extras aceitas (US53)."""
+    return total_by_kind(custody).get(K.RETENTION, 0)
+
+
+def extension_cents(custody, assignment):
+    """Valor de hora extra retido para a alocação (as retenções da vaga não têm alocação)."""
+    total = custody.entries.filter(kind=K.RETENTION, assignment=assignment).aggregate(
+        total=Sum("amount_cents")
+    )["total"]
+    return total or 0
+
+
 @transaction.atomic
 def open_custody(vacancy, *, actor=None, now=None):
     custody = Custody.objects.create(
@@ -73,6 +86,31 @@ def retain(custody, *, actor=None, now=None):
 
 
 @transaction.atomic
+def retain_extension(custody, overtime_request, *, actor=None, now=None):
+    """Hora extra aceita (US53): a empresa paga a extensão em custódia. Idempotente.
+
+    Se o PSP falhar, `PaymentGatewayError` sobe e nada é gravado.
+    """
+    custody = _lock(custody)
+    key = f"overtime:{overtime_request.pk}:retencao"
+    if LedgerEntry.objects.filter(idempotency_key=key).exists():
+        return custody
+    if custody.status != C.HELD:
+        raise DomainError("A custódia da vaga precisa estar RETIDA para reter a hora extra.")
+    amount = overtime_request.amount_cents
+    get_gateway().hold(idempotency_key=key, amount_cents=amount)
+    _entry(custody, K.RETENTION, amount, key, overtime_request.assignment, now)
+    return transition(
+        custody,
+        CUSTODY_MACHINE,
+        C.HELD,
+        actor=actor,
+        reason=f"Retenção da hora extra da alocação {overtime_request.assignment_id}",
+        now=now,
+    )
+
+
+@transaction.atomic
 def cancel_pending(custody, *, actor=None, reason="", now=None):
     custody = _lock(custody)
     return transition(custody, CUSTODY_MACHINE, C.CANCELLED, actor=actor, reason=reason, now=now)
@@ -101,6 +139,23 @@ def settle_assignment(custody, assignment, *, actor=None, now=None):
         fee_key = f"assignment:{assignment.pk}:taxa"
         gateway.release(idempotency_key=fee_key, amount_cents=fee, destination="platform")
         _entry(custody, K.PLATFORM_FEE, fee, fee_key, assignment, now)
+    # Hora extra aceita (US53): repasse e taxa próprios, em lançamentos separados.
+    extension = extension_cents(custody, assignment)
+    if extension:
+        extension_fee = params.worker_fee_cents(extension)
+        key = f"assignment:{assignment.pk}:repasse-extensao"
+        gateway.release(
+            idempotency_key=key,
+            amount_cents=extension - extension_fee,
+            destination=f"worker:{assignment.worker_id}",
+        )
+        _entry(custody, K.WORKER_PAYOUT, extension - extension_fee, key, assignment, now)
+        if extension_fee > 0:
+            fee_key = f"assignment:{assignment.pk}:taxa-extensao"
+            gateway.release(
+                idempotency_key=fee_key, amount_cents=extension_fee, destination="platform"
+            )
+            _entry(custody, K.PLATFORM_FEE, extension_fee, fee_key, assignment, now)
     return transition(
         custody,
         CUSTODY_MACHINE,
@@ -123,6 +178,11 @@ def refund_assignment(custody, assignment, *, actor=None, reason="", now=None):
     amount = assignment.vacancy.pay_per_person_cents
     get_gateway().refund(idempotency_key=key, amount_cents=amount)
     _entry(custody, K.COMPANY_REFUND, amount, key, assignment, now)
+    extension = extension_cents(custody, assignment)
+    if extension:  # a hora extra retida também volta para a empresa (US53)
+        extension_key = f"assignment:{assignment.pk}:estorno-extensao"
+        get_gateway().refund(idempotency_key=extension_key, amount_cents=extension)
+        _entry(custody, K.COMPANY_REFUND, extension, extension_key, assignment, now)
     return transition(
         custody,
         CUSTODY_MACHINE,
@@ -142,7 +202,7 @@ def close(custody, *, actor=None, reason="", now=None):
     CUSTODY_MACHINE.validate(custody.status, C.CLOSED)
     totals = total_by_kind(custody)
     used = sum(totals.get(k, 0) for k in (K.WORKER_PAYOUT, K.PLATFORM_FEE, K.COMPANY_REFUND))
-    remaining = custody.amount_cents - used
+    remaining = retained_total(custody) - used
     if remaining < 0:
         raise DomainError("Invariante violada: lançamentos superam o valor retido.")
     if remaining > 0:

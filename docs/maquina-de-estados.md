@@ -62,7 +62,7 @@ Estados finais: `APROVADA` (o acompanhamento continua na alocação), `RECUSADA`
 | `CONFIRMADA` | Prestador cancela [pós-MVP: US72] | `CANCELADA_PRESTADOR` | ≥ *1440 min (24 h)* antes: sem penalidade. Menos que isso: bloqueio de *7 dias* + rebaixamento de status. Libera a posição |
 | `CONFIRMADA` | Empresa cancela (US71) | `CANCELADA_EMPRESA` | Só se faltar ≥ *1440 min (24 h)* para `starts_at` (`free_cancel_minutes_before`); motivo obrigatório. Estorno da posição (`ESTORNO_CONTRATANTE`); notifica o prestador. A posição **não** volta para a busca |
 | `EM_EXECUCAO` | Prestador faz check-out (US54) | `AGUARDANDO_VALIDACAO` | Guarda o horário de saída |
-| `EM_EXECUCAO` | SISTEMA: agora > `ends_at` + *check-out automático (120 min)* | `AGUARDANDO_VALIDACAO` | `check_out_at = ends_at`, `check_out_auto = true` |
+| `EM_EXECUCAO` | SISTEMA: agora > fim do turno + *check-out automático (120 min)* | `AGUARDANDO_VALIDACAO` | Fim do turno = `extended_until` (hora extra aceita, US53) ou `ends_at`. `check_out_at` = esse fim, `check_out_auto = true` |
 | `AGUARDANDO_VALIDACAO` | Empresa aprova as horas (US56) | `APROVADA` | — |
 | `AGUARDANDO_VALIDACAO` | SISTEMA: *janela de contestação (1440 min)* após o check-out sem manifestação (US59) | `APROVADA` | `validated_by = SISTEMA`, motivo "aprovação por decurso de prazo" |
 | `AGUARDANDO_VALIDACAO` | Empresa contesta com motivo (US57) [extra] | `CONTESTADA` | Notifica o prestador e o admin |
@@ -92,8 +92,8 @@ Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pe
 |---|---|---|---|
 | — | Empresa pede hora extra (US52) | `AGUARDANDO_PRESTADOR` | Alocação `EM_EXECUCAO`, agora < `ends_at`; 30 min a 4 h em passos de 30 min; valor ≥ valor do turno ÷ duração × horas extras. `expires_at` = mín(agora + *prazo de resposta (15 min)*, `ends_at`). Notifica o prestador. Nada é cobrado |
 | `AGUARDANDO_PRESTADOR` | SISTEMA: agora ≥ `expires_at` | `EXPIRADO` | Notifica a empresa. Nada é cobrado. Idempotente |
-| `AGUARDANDO_PRESTADOR` | Prestador aceita (US53) | `ACEITO` | — |
-| `AGUARDANDO_PRESTADOR` | Prestador recusa (US53) | `RECUSADO` | Sem penalidade |
+| `AGUARDANDO_PRESTADOR` | Prestador aceita (US53) | `ACEITO` | Agora < `expires_at`, alocação `EM_EXECUCAO`. A empresa paga a extensão em custódia (`RETENCAO` da extensão); `extended_until = ends_at + minutos`; notifica a empresa. Se o PSP falhar, nada muda e os dois são avisados |
+| `AGUARDANDO_PRESTADOR` | Prestador recusa (US53) | `RECUSADO` | Agora < `expires_at`. Sem penalidade; notifica a empresa |
 
 ---
 
@@ -103,9 +103,10 @@ Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pe
 |---|---|---|---|
 | — | Vaga criada | `PENDENTE` | — |
 | `PENDENTE` | Pagamento confirmado | `RETIDA` | `RETENCAO` = valor × posições |
+| `RETIDA` | Prestador aceita hora extra (US53) | `RETIDA` | Retenção adicional: `RETENCAO` com o valor da extensão, ligada à alocação |
 | `PENDENTE` | Vaga cancelada antes do pagamento | `CANCELADA` | — |
 | `RETIDA` | Cada alocação `PAGA` ou `ESTORNADA` | `RETIDA` | Lançamentos parciais |
-| `RETIDA` | Vaga `FINALIZADA` ou `CANCELADA` | `ENCERRADA` | Estorno do saldo restante. Invariante: `RETENCAO = REPASSES + TAXAS + ESTORNOS` |
+| `RETIDA` | Vaga `FINALIZADA` ou `CANCELADA` | `ENCERRADA` | Estorno do saldo restante (soma de todas as retenções, inclusive horas extras, menos o já lançado). Invariante: `RETENCAO = REPASSES + TAXAS + ESTORNOS` |
 
 ---
 

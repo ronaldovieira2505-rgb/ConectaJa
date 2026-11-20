@@ -83,7 +83,7 @@ def auto_check_out(assignment, *, now=None):
         S.AWAITING_VALIDATION,
         reason="Check-out automático",
         now=now,
-        check_out_at=assignment.vacancy.ends_at,
+        check_out_at=assignment.extended_until or assignment.vacancy.ends_at,
         check_out_auto=True,
     )
 
