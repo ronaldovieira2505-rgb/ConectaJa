@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError, formatDateTime, type Candidate, type VacancyCandidates } from '../api'
 import Avatar from '../components/Avatar'
 import CancelReasonForm from '../components/CancelReasonForm'
+import PortfolioThumbs from '../components/PortfolioThumbs'
 import { Alert, Badge, Button } from '../components/ui'
 
 function formatDay(iso: string): string {
@@ -156,6 +157,7 @@ export default function VacancyCandidatesSection({
               </p>
             )}
             {c.bio && <p className="descricao">{c.bio}</p>}
+            <PortfolioThumbs photos={c.portfolio ?? []} name={c.name} />
             <p>
               {c.completed_shifts} turnos concluídos · {c.no_shows_30d ?? 0}{' '}
               {(c.no_shows_30d ?? 0) === 1 ? 'falta' : 'faltas'} nos últimos{' '}

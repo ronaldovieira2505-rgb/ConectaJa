@@ -13,6 +13,7 @@ from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from apps.workers.models import Worker, WorkerDocument
+from apps.workers.portfolio import serialize_photos
 from apps.workers.skills import serialize_skills
 
 NOT_FOUND = "Candidatura não encontrada."
@@ -46,6 +47,8 @@ def serialize_candidate(application, params=None):
         # Habilidades (US08): a categoria da vaga vem destacada quando o candidato a marcou.
         "skills": serialize_skills(worker.skills, application.vacancy.category),
         "bio": worker.bio,
+        # Fotos de trabalhos anteriores (US41), servidas só pela API.
+        "portfolio": serialize_photos(worker),
         "applied_at": application.created_at.isoformat(),
     }
 
@@ -97,7 +100,7 @@ class VacancyCandidatesView(CandidateAreaView):
         pending = (
             vacancy.applications.filter(status=Application.Status.PENDING)
             .select_related("worker")
-            .prefetch_related("worker__documents")
+            .prefetch_related("worker__documents", "worker__portfolio")
             .order_by("created_at", "pk")
         )
         team = (
