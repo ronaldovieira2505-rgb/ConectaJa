@@ -1,0 +1,83 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Início</a> &rsaquo;
+    <a href="{{ changelist_url }}">Denúncias</a> &rsaquo;
+    {{ title }}
+  </div>
+{% endblock %}
+{% block content %}
+  {% if history.upheld_alert %}
+    <p id="upheld-alert" style="color:#b00020;font-weight:bold">
+      ⚠ Este alvo tem {{ history.upheld_count }} denúncias procedentes.
+    </p>
+  {% endif %}
+  <table id="report-data">
+    <tr><th>Enviada em</th><td>{{ report.created_at|date:"d/m/Y H:i" }}{% if overdue %} <strong style="color:#b00020">⚠ aberta há mais de 48 h</strong>{% endif %}</td></tr>
+    <tr><th>Quem denunciou</th><td>{{ reporter }}</td></tr>
+    <tr><th>Alvo</th><td>{{ report.target_label }}</td></tr>
+    <tr><th>Motivo</th><td>{{ report.get_reason_display }}</td></tr>
+    <tr><th>Estado</th><td id="report-status">{{ report.get_status_display }}</td></tr>
+    <tr><th>Descrição</th><td id="report-description">{{ report.description|linebreaksbr }}</td></tr>
+    {% if report.decided_at %}
+      <tr><th>Concluída em</th><td>{{ report.decided_at|date:"d/m/Y H:i" }} por {{ report.decided_by }}</td></tr>
+      <tr><th>Parecer</th><td id="report-decision">{{ report.decision|linebreaksbr }}</td></tr>
+    {% endif %}
+  </table>
+
+  <h2 style="margin-top:24px">Histórico do alvo</h2>
+  <ul id="target-history">
+    <li>Denúncias procedentes: {{ history.upheld_count }}</li>
+    {% if history.no_shows is not None %}<li>Faltas: {{ history.no_shows }}</li>{% endif %}
+    <li>
+      Avaliações:
+      {% if history.rating %}
+        média {{ history.rating.average|floatformat:1 }} em {{ history.rating.count }}
+      {% else %}
+        nenhuma
+      {% endif %}
+    </li>
+  </ul>
+  {% if history.reviews %}
+    <h3>Avaliações recentes</h3>
+    <ul id="target-reviews">
+      {% for item in history.reviews %}
+        <li>★ {{ item.rating }} · {{ item.created_at|date:"d/m/Y" }}{% if item.comment %} — {{ item.comment }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <h3>Outras denúncias sobre o alvo</h3>
+  {% if history.other_reports %}
+    <ul id="other-reports">
+      {% for other in history.other_reports %}
+        <li>
+          <a href="{% url 'admin:reports_report_review' other.pk %}">#{{ other.pk }}</a>
+          · {{ other.created_at|date:"d/m/Y" }} · {{ other.get_reason_display }} · {{ other.get_status_display }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Nenhuma.</p>
+  {% endif %}
+  {% if vacancy_history_url %}
+    <p><a id="shift-history" href="{{ vacancy_history_url }}">Ver o histórico do turno ({{ vacancy.title }})</a></p>
+  {% endif %}
+
+  {% if is_open %}
+    {% if can_start %}
+      <form method="post" style="margin-top:24px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="start">
+        <button type="submit">Marcar como em análise</button>
+      </form>
+    {% endif %}
+    <form method="post" id="conclude-form" style="margin-top:24px">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="conclude">
+      {{ form.as_p }}
+      <button type="submit" class="default">Concluir denúncia</button>
+    </form>
+  {% elif report.status == "PROCEDENTE" and suspend_url and not subject_suspended %}
+    <p style="margin-top:24px"><a id="suspend-link" href="{{ suspend_url }}">Suspender a conta do denunciado</a></p>
+  {% endif %}
+{% endblock %}
