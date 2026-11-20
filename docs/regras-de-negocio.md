@@ -95,6 +95,8 @@ Somente dentro do app (sino com contador): aprovação ou recusa de candidatura,
 
 **Lembrete do turno (US49):** o `processar_prazos` avisa o prestador de cada alocação `CONFIRMADA` cujo início está a até `shift_reminder_minutes_before`, com vaga, empresa, data e horário, endereço completo, link "Ver no mapa" e o horário em que o check-in abre. O título diz "amanhã" (ou "hoje", se a aprovação veio em cima da hora). Cada alocação recebe no máximo um lembrete, garantido pela chave de idempotência da notificação; alocação cancelada, em falta ou já iniciada não recebe.
 
+**Alerta de vaga próxima (US19):** o prestador liga os alertas, escolhe o raio (5, 10, 20 ou 50 km) e define a localização de casa ("Usar minha localização atual"; ela nunca é exibida a ninguém). Quando uma vaga é publicada (paga) a até esse raio, numa categoria das suas habilidades (sem nenhuma, todas) e, se ele ligar "Só vagas nos meus horários", dentro da disponibilidade (US10), ele recebe "Nova vaga perto de você" com título, valor líquido, data e distância. Suspenso, sem PIX ou com conflito de horário não recebe. No máximo um alerta por vaga e 5 por dia (decisão do PO). O envio acontece depois do pagamento e nunca o desfaz.
+
 ## 9. Fora do produto (decisões do PO)
 
 - **Cupom de desconto (US28):** removido por decisão do PO.
