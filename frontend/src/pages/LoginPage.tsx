@@ -1,17 +1,25 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api'
 import { homePathFor, useAuth } from '../authContext'
 import { Alert, Button, Card, Field } from '../components/ui'
 
+/** Destino depois do login (ex.: voltar para a vaga, US18). Só caminhos internos do app. */
+function safeNext(next: string | null): string | null {
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return null
+  return next
+}
+
 export default function LoginPage() {
   const { user, login } = useAuth()
+  const [searchParams] = useSearchParams()
+  const next = safeNext(searchParams.get('next'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (user) return <Navigate to={homePathFor(user.role)} replace />
+  if (user) return <Navigate to={next ?? homePathFor(user.role)} replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()

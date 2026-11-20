@@ -13,7 +13,7 @@ from apps.companies.public import company_summary
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies.application_services import has_overlap
-from apps.vacancies.models import Application, Assignment, Vacancy
+from apps.vacancies.models import Application, Assignment, FavoriteVacancy, Vacancy
 from apps.vacancies.photos import photo_url
 from apps.vacancies.review_services import company_rating
 from apps.workers.models import Worker
@@ -135,7 +135,8 @@ def search(params, now=None):
     return results
 
 
-def serialize_card(vacancy, distance_m=None, params=None, ratings=None):
+def serialize_card(vacancy, distance_m=None, params=None, ratings=None, favorites=None):
+    """`favorites`: ids das vagas favoritas do prestador logado (US18)."""
     params = params or PlatformParameters.get()
     gross = vacancy.pay_per_person_cents
     filled = getattr(vacancy, "filled", None)
@@ -166,6 +167,7 @@ def serialize_card(vacancy, distance_m=None, params=None, ratings=None):
         "distance_km": None if distance_m is None else round(distance_m / 1000, 1),
         "photo_url": photo_url(vacancy),
         "company_rating": rating,
+        "favorite": vacancy.pk in (favorites or ()),
     }
 
 
@@ -230,6 +232,9 @@ def serialize_detail(vacancy, user, now=None):
         }
     )
     data["can_apply"] = data["apply_blocker"] is None
+    data["favorite"] = bool(
+        worker and FavoriteVacancy.objects.filter(worker=worker, vacancy=vacancy).exists()
+    )
     return data
 
 

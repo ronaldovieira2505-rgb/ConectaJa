@@ -14,6 +14,7 @@ from apps.core.models import PlatformParameters
 from apps.core.permissions import IsWorkerUser
 from apps.vacancies import application_services as applications
 from apps.vacancies import assignment_services as assignments
+from apps.vacancies import favorites
 from apps.vacancies import review_services as reviews
 from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
@@ -327,3 +328,37 @@ class AssignmentReviewCompanyView(WorkerAreaView):
             },
             status=201,
         )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class VacancyFavoriteView(WorkerAreaView):
+    """`POST`/`DELETE /api/vacancies/<id>/favorite/` (US18). Repetir não duplica nem falha."""
+
+    def post(self, request, pk):
+        worker = self.worker(request)
+        if worker is None:
+            return Response({"detail": "Acesso restrito a prestadores."}, status=403)
+        vacancy = Vacancy.objects.filter(pk=pk, status__in=favorites.FAVORITABLE_STATUSES).first()
+        if vacancy is None:
+            return Response({"detail": "Vaga não encontrada."}, status=404)
+        created = favorites.add_favorite(worker, vacancy)
+        return Response(
+            {"vacancy_id": vacancy.pk, "favorite": True}, status=201 if created else 200
+        )
+
+    def delete(self, request, pk):
+        worker = self.worker(request)
+        if worker is None:
+            return Response({"detail": "Acesso restrito a prestadores."}, status=403)
+        favorites.remove_favorite(worker, pk)
+        return Response(status=204)
+
+
+class WorkerFavoritesView(WorkerAreaView):
+    """`GET /api/workers/me/favorites/`: só as favoritas do próprio prestador (US18)."""
+
+    def get(self, request):
+        worker = self.worker(request)
+        if worker is None:
+            return Response({"detail": "Acesso restrito a prestadores."}, status=403)
+        return Response({"results": favorites.favorites_payload(worker)})

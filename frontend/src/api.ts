@@ -255,6 +255,13 @@ export interface VacancyCard {
   photo_url: string | null
   // Média das avaliações da empresa (US64); `average` é null sem avaliações.
   company_rating?: CompanyRating
+  // Salva nos favoritos do prestador logado (US18).
+  favorite?: boolean
+}
+
+/** Item de "Favoritas" (US18): "Encerrada", "Lotada" ou null quando ainda aceita candidaturas. */
+export interface FavoriteCard extends VacancyCard {
+  closed_label: string | null
 }
 
 export interface CompanyRating {

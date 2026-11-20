@@ -14,6 +14,7 @@ import {
 import CompanyAbout from '../components/CompanyAbout'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
+import FavoriteButton from '../components/FavoriteButton'
 
 /** Detalhe da vaga para o prestador: o essencial à vista e o restante em "ver mais" (US17). */
 export default function VacancyPublicDetailPage() {
@@ -87,7 +88,15 @@ export default function VacancyPublicDetailPage() {
         alt="Foto do local do turno"
         className="mb-6 aspect-[16/9] w-full rounded-[24px] md:aspect-[16/7]"
       />
-      <h1>{vacancy.title}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1>{vacancy.title}</h1>
+        <FavoriteButton
+          vacancyId={vacancy.id}
+          title={vacancy.title}
+          initial={vacancy.favorite ?? false}
+          className="shrink-0"
+        />
+      </div>
       <p className="marcadores">
         <Badge>{vacancy.category_label}</Badge>
         {vacancy.urgent && <Badge tone="warning">Urgente</Badge>}

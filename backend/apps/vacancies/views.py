@@ -22,7 +22,7 @@ from apps.core.models import PlatformParameters
 from apps.core.permissions import IsCompanyUser
 from apps.payments import services as payments
 from apps.payments.models import Custody, LedgerEntry
-from apps.vacancies import photos, search, services
+from apps.vacancies import favorites, photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
 from apps.vacancies.review_services import company_rating_summary
 from integrations.payments import PaymentGatewayError
@@ -172,8 +172,13 @@ class VacancyCreateView(PublicReadMixin, CompanyAreaView):
             return Response({"detail": str(error)}, status=400)
         params = PlatformParameters.get()
         ratings = company_rating_summary({v.company_id for v, _ in found})
+        mine = favorites.favorite_ids(request.user)
         return Response(
-            {"results": [search.serialize_card(v, d, params, ratings) for v, d in found]}
+            {
+                "results": [
+                    search.serialize_card(v, d, params, ratings, favorites=mine) for v, d in found
+                ]
+            }
         )
 
     def post(self, request):
