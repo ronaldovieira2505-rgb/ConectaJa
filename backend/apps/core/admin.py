@@ -108,8 +108,15 @@ POSITIVE_ONLY_FIELDS = (
     "level_bronze_shifts",
     "level_silver_shifts",
     "level_gold_shifts",
+    "premium_min_paid_shifts",
+    "premium_window_days",
 )
-LEVEL_RATING_FIELDS = ("level_bronze_rating", "level_silver_rating", "level_gold_rating")
+LEVEL_RATING_FIELDS = (
+    "level_bronze_rating",
+    "level_silver_rating",
+    "level_gold_rating",
+    "premium_min_rating",
+)
 
 
 def humanize_minutes(minutes):
@@ -152,6 +159,9 @@ class PlatformParametersForm(forms.ModelForm):
             "level_silver_rating",
             "level_gold_shifts",
             "level_gold_rating",
+            "premium_min_paid_shifts",
+            "premium_min_rating",
+            "premium_window_days",
             "worker_fee_percent",
         )
 

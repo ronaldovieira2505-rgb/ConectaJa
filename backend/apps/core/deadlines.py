@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from apps.companies import premium
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies import arrival, overtime, reminders
@@ -150,6 +151,13 @@ def process_deadlines(now=None):
     _apply(
         done, "vagas_finalizadas", in_progress, lambda v: vacancies.finalize_vacancy(v, now=now)
     )
+
+    # 12. Selo de contratante premium (US66): concede ou retira; idempotente.
+    changes = premium.recalculate_all(now=now)
+    if changes["GANHOU"]:
+        done["selos_premium_concedidos"] = changes["GANHOU"]
+    if changes["PERDEU"]:
+        done["selos_premium_retirados"] = changes["PERDEU"]
 
     return done
 

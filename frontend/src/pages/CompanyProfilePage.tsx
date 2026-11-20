@@ -16,6 +16,7 @@ import HistoryItem from '../components/HistoryItem'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import { badgeToneFor } from '../status'
 import type { Tone } from '../status'
+import PremiumBadge from '../components/PremiumBadge'
 
 const LOGO_TYPES = 'image/jpeg,image/png,image/webp'
 const HISTORY_STATUSES = ['FINALIZADA', 'CANCELADA']
@@ -176,6 +177,30 @@ export default function CompanyProfilePage() {
           </div>
         </dl>
       </Card>
+
+      {company.premium && (
+        <Card>
+          <h2>Contratante premium</h2>
+          {company.premium.active ? (
+            <>
+              <p>
+                <PremiumBadge />
+              </p>
+              <p>Sua empresa tem o selo. Ele aparece ao lado do nome na busca e no detalhe das vagas.</p>
+            </>
+          ) : (
+            <>
+              <p>Sua empresa ainda não tem o selo. Falta:</p>
+              <ul aria-label="O que falta para o selo">
+                {company.premium.missing.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="sub">{company.premium.explanation}</p>
+        </Card>
+      )}
 
       <Card>
         <h2>Sobre a empresa</h2>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { brl, formatShift, ratingLabel, type VacancyCard } from '../api'
 import FavoriteButton from './FavoriteButton'
 import VacancyCover from './VacancyCover'
+import PremiumBadge from './PremiumBadge'
 
 const META = 'flex items-center gap-2 text-[13px] leading-5 text-tinta-media'
 const META_ICON = 'size-4 shrink-0'
@@ -67,6 +68,7 @@ export default function VacancyTile({
             )}
           </Heading>
           <p className="m-0 text-[13px] leading-5 text-tinta-media">{vacancy.company_name}</p>
+          {vacancy.company_premium && <PremiumBadge />}
           <p className="m-0 text-[12px] leading-4 text-tinta-media">
             {ratingLabel(vacancy.company_rating)}
           </p>

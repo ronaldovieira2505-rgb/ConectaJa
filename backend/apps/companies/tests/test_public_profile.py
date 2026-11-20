@@ -32,6 +32,7 @@ SUMMARY_FIELDS = {
     "completed_shifts",
     "description",
     "profile_available",
+    "premium",  # selo de contratante premium (US66)
 }
 
 

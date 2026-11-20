@@ -21,10 +21,11 @@ class CompanyAdmin(SuspensionAdminMixin, admin.ModelAdmin):
         "data_unverified",
         "suspended_until",
         "upheld_reports",
+        "premium",
         "suspension_actions",
         "created_at",
     )
-    list_filter = ("verification_status", "data_unverified", "tax_regime")
+    list_filter = ("verification_status", "data_unverified", "tax_regime", "premium")
     search_fields = ("legal_name", "trade_name", "cnpj")
     # Status e suspensão só mudam pelo serviço de domínio (grava a auditoria).
     readonly_fields = (
@@ -32,6 +33,8 @@ class CompanyAdmin(SuspensionAdminMixin, admin.ModelAdmin):
         "suspended_until",
         "suspension_indefinite",
         "upheld_reports",
+        "premium",
+        "premium_since",
     )
     inlines = [CompanyMemberInline]
 

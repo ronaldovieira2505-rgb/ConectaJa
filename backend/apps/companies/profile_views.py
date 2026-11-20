@@ -14,6 +14,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.companies import premium
 from apps.companies.models import Company
 from apps.companies.views import first_error
 from apps.core.exceptions import DomainError
@@ -77,6 +78,7 @@ def serialize_company(company):
         "logo_url": logo_url(company),
         "member_since": company.created_at.isoformat(),
         "stats": company_stats(company),
+        "premium": premium.serialize(company),
     }
 
 
