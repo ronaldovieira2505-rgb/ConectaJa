@@ -93,6 +93,12 @@ Uma por alocação (`assignment`, 1:1). Campos: `reason` (`GPS`, `BATERIA`, `END
 `created_at` (vira o horário do check-in se confirmada), `decided_at`, `decided_by` e `decision_reason`.
 Enquanto `PENDENTE` ou `COM_ADMIN`, a falta automática não se aplica à alocação.
 
+### OvertimeRequest — pedido de hora extra (US52/US53)
+Campos: `assignment`, `minutes` (30 a 240, de 30 em 30), `amount_cents` (valor bruto da extensão, ≥ mínimo
+proporcional ao valor por hora do turno), `status` (`AGUARDANDO_PRESTADOR`, `ACEITO`, `RECUSADO`, `EXPIRADO`),
+`requested_by`, `created_at`, `expires_at` e `responded_at`. Restrições: um pendente e no máximo um aceito por
+alocação. As transições ficam em `StateTransition` (`entity_type = "OvertimeRequest"`).
+
 ## Dinheiro (simulado no MVP, mesmo desenho do PSP real)
 
 ### Custody — Custódia da vaga

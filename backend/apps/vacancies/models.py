@@ -389,3 +389,62 @@ class ArrivalJustification(models.Model):
 
     def __str__(self):
         return f"Justificativa da alocação #{self.assignment_id}"
+
+
+class OvertimeRequest(models.Model):
+    """Pedido de hora extra da empresa para uma alocação em execução (US52/US53).
+
+    Um pendente por alocação; e só uma extensão aceita por alocação (decisão do PO).
+    """
+
+    class Status(models.TextChoices):
+        AWAITING = "AGUARDANDO_PRESTADOR", "Aguardando prestador"
+        ACCEPTED = "ACEITO", "Aceito"
+        DECLINED = "RECUSADO", "Recusado"
+        EXPIRED = "EXPIRADO", "Expirado"
+
+    MIN_MINUTES = 30
+    MAX_MINUTES = 240
+    STEP_MINUTES = 30
+
+    assignment = models.ForeignKey(
+        Assignment, on_delete=models.CASCADE, related_name="overtime_requests"
+    )
+    minutes = models.PositiveIntegerField("horas extras (min)")
+    amount_cents = models.PositiveIntegerField("valor da extensão (centavos)")
+    status = models.CharField(
+        "situação", max_length=20, choices=Status.choices, default=Status.AWAITING
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="pedido por",
+    )
+    created_at = models.DateTimeField("pedido em", default=timezone.now)
+    expires_at = models.DateTimeField("expira em")
+    responded_at = models.DateTimeField("respondido em", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "pedido de hora extra"
+        verbose_name_plural = "pedidos de hora extra"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment"],
+                condition=models.Q(status="AGUARDANDO_PRESTADOR"),
+                name="one_pending_overtime_per_assignment",
+            ),
+            models.UniqueConstraint(
+                fields=["assignment"],
+                condition=models.Q(status="ACEITO"),
+                name="one_accepted_overtime_per_assignment",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount_cents__gt=0), name="overtime_amount_gt_0"
+            ),
+        ]
+
+    def __str__(self):
+        return f"Hora extra #{self.pk}"

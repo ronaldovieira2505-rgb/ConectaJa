@@ -87,6 +87,7 @@ MINUTE_FIELDS = (
     "no_show_tolerance_minutes",
     "auto_checkout_minutes_after_end",
     "contest_window_minutes",
+    "overtime_response_minutes",
     "free_cancel_minutes_before",
 )
 # Parâmetros que não fazem sentido com zero; os demais aceitam 0.
@@ -95,6 +96,8 @@ POSITIVE_ONLY_FIELDS = (
     "shift_reminder_minutes_before",
     "geofence_radius_m",
     "contest_window_minutes",
+    "overtime_response_minutes",
+    "overtime_response_minutes",
     "no_show_limit",
     "no_show_window_days",
     "suspension_days",

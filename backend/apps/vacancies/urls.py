@@ -1,6 +1,13 @@
 from django.urls import path
 
-from . import candidate_views, invite_views, validation_views, views, worker_views
+from . import (
+    candidate_views,
+    invite_views,
+    overtime_views,
+    validation_views,
+    views,
+    worker_views,
+)
 
 urlpatterns = [
     path(
@@ -72,6 +79,11 @@ urlpatterns = [
         "assignments/<int:pk>/arrival-justification/decide/",
         validation_views.ArrivalJustificationDecideView.as_view(),
         name="assignment-arrival-justification-decide",
+    ),
+    path(
+        "assignments/<int:pk>/overtime/",
+        overtime_views.OvertimeRequestView.as_view(),
+        name="assignment-overtime",
     ),
     path(
         "assignments/<int:pk>/cancel-by-worker/",

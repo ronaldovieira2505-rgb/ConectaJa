@@ -26,6 +26,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `geofence_radius_m` | 150 | Distância máxima para aceitar o check-in |
 | `auto_checkout_minutes_after_end` | 120 (2 h) | Sem check-out até X min após o fim = check-out automático no horário previsto |
 | `contest_window_minutes` | 1440 (24 h) | Janela para a empresa aprovar ou contestar; silêncio = aprovação |
+| `overtime_response_minutes` | 15 | Prazo para o prestador responder a um pedido de hora extra; sem resposta (ou no fim do turno, o que vier primeiro), o pedido expira (US52) |
 | `no_show_limit` / `no_show_window_days` | 2 / 30 | Faltas que geram suspensão automática, e a janela considerada |
 | `suspension_days` | 15 | Duração da suspensão automática |
 | `free_cancel_minutes_before` | 1440 (24 h) | Prazo mínimo (X min antes do início) para a empresa cancelar pelo app (US71); também é o limite sem penalidade do prestador [pós-MVP: US72] |
@@ -33,7 +34,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `review_window_days` | 7 | Prazo, em dias após a aprovação das horas, para a empresa avaliar o prestador (US63) e o prestador avaliar a empresa (US64); deve ser maior que zero |
 | `worker_fee_percent` | 3 | Taxa retida do prestador |
 
-**Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `shift_reminder_minutes_before`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
+**Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `shift_reminder_minutes_before`, `geofence_radius_m`, `contest_window_minutes`, `overtime_response_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
 
 **Suspensão manual de conta (US76):** só o admin suspende ou reativa, sempre com motivo. A suspensão tem de 1 a 365 dias ou é por tempo indeterminado. Empresa suspensa não cria nem paga vagas novas (vê "Conta suspensa até ..."), mas as vagas já publicadas continuam valendo. Prestador suspenso não se candidata nem é aprovado, e mantém as alocações já confirmadas. Banimento definitivo e recurso do usuário ficam fora do escopo.
 
@@ -89,6 +90,8 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 **MVP:** não há hora extra. O turno tem as horas do anúncio, e o check-out registra a saída real só para conferência.
 
 **Pós-MVP (US52/US53), recomendado:** a empresa solicita a extensão **antes** de o turno terminar, informando as horas e o valor. O prestador aceita ou recusa no app, sem penalidade se recusar. A empresa **paga a extensão em custódia** antes de ela começar. Assim a garantia de pagamento continua valendo. Descartamos a cobrança automática por tempo excedido: ela cobraria a empresa sem consentimento e o valor não estaria garantido ao prestador.
+
+**Pedido de hora extra (US52, decisões do PO):** com a alocação `EM_EXECUCAO` e antes do fim do turno, a empresa toca em "Pedir hora extra" na equipe da vaga e informa de **30 min a 4 h, em passos de 30 min**, e o valor da extensão (`POST /api/assignments/<id>/overtime/`). O valor **não pode ser menor que a hora do próprio turno**: mínimo = valor do turno ÷ duração do turno × horas extras, arredondado para cima no centavo (ex.: R$ 100,00 por 4 h → R$ 25,00 por hora extra). O pedido nasce **"Aguardando prestador"** e o prestador é notificado. Só existe **um pedido pendente por alocação** e **uma extensão aceita por alocação**; depois de recusado ou expirado, a empresa pode pedir de novo. Sem resposta em `overtime_response_minutes` (15 min) ou até o fim do turno, o que vier primeiro, o `processar_prazos` marca o pedido como **expirado** (idempotente), avisa a empresa e **nada é cobrado**. A empresa só paga quando o prestador aceita (US53).
 
 ## 8. Notificações
 

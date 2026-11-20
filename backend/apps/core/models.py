@@ -33,6 +33,9 @@ class PlatformParameters(models.Model):
     contest_window_minutes = models.PositiveIntegerField(
         "janela de contestação (min)", default=1440
     )
+    overtime_response_minutes = models.PositiveIntegerField(
+        "prazo para o prestador responder à hora extra (min)", default=15
+    )
     no_show_limit = models.PositiveIntegerField("faltas que geram suspensão", default=2)
     no_show_window_days = models.PositiveIntegerField("janela de faltas (dias)", default=30)
     suspension_days = models.PositiveIntegerField("duração da suspensão (dias)", default=15)
