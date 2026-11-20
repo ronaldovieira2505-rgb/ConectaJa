@@ -12,6 +12,7 @@ from apps.core.notifications import notify, notify_company
 from apps.core.state_machine import record_creation, transition
 from apps.payments import services as payments
 from apps.vacancies import assignment_services as assignments
+from apps.vacancies.equipment import equipment_text
 from apps.vacancies.models import Application, Assignment, Vacancy, VacancyChange
 from apps.vacancies.state_machine import (
     APPLICATION_MACHINE,
@@ -113,7 +114,18 @@ EDITABLE_FIELDS = (
     "longitude",
     "starts_at",
     "ends_at",
+    "equipment",
+    "equipment_notes",
 )
+
+
+def _audit_value(name, value):
+    """Valor gravado em `VacancyChange`; os itens de EPI viram texto legível (US22)."""
+    if value is None:
+        return ""
+    if name == "equipment":
+        return equipment_text(value)
+    return str(value)
 
 
 def _ensure_changeable(vacancy):
@@ -158,8 +170,8 @@ def edit_vacancy(vacancy, *, actor=None, now=None, **fields):
             user=actor,
             changed_at=now,
             field=name,
-            old_value="" if old is None else str(old),
-            new_value="" if new is None else str(new),
+            old_value=_audit_value(name, old),
+            new_value=_audit_value(name, new),
         )
         for name, old, new in changes
     )

@@ -69,6 +69,7 @@ Decisão do admin na fila de verificação (US73): `subject_type` (`COMPANY`/`WO
 | `starts_at`, `ends_at` | horas do turno definidas no anúncio |
 | `pay_per_person_cents` | valor bruto por pessoa (o que a empresa paga) |
 | `positions` | número de pessoas (≥ 1) |
+| `equipment`, `equipment_notes` | itens da lista fixa de EPIs, uniforme e ferramentas com quem providencia (`PRESTADOR` ou `EMPRESA`) e observações de até 300 caracteres (US22) |
 | `requires_meeting` | [pós-MVP: US23] |
 | `status` | ver `docs/maquina-de-estados.md` |
 

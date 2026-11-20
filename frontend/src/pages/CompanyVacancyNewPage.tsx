@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError, brl, type Vacancy } from '../api'
 import { CATEGORIES } from '../categories'
+import EquipmentFields from '../components/EquipmentFields'
 import { Alert, Button, Card, Field, Loading, SelectField } from '../components/ui'
+import type { EquipmentEntry } from '../equipment'
 
 /** Converte "150,50" em centavos; 0 se não for um número válido. */
 function toCents(text: string): number {
@@ -67,6 +69,8 @@ export default function CompanyVacancyNewPage() {
   const [locating, setLocating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [photo, setPhoto] = useState<File | null>(null)
+  const [equipment, setEquipment] = useState<EquipmentEntry[]>([])
+  const [equipmentNotes, setEquipmentNotes] = useState('')
 
   useEffect(() => {
     if (!duplicateId) return
@@ -76,6 +80,8 @@ export default function CompanyVacancyNewPage() {
         if (!active) return
         setSource(vacancy)
         setForm(formFrom(vacancy))
+        setEquipment(vacancy.equipment ?? [])
+        setEquipmentNotes(vacancy.equipment_notes ?? '')
       })
       .catch(() => active && setError('Não foi possível carregar a vaga para duplicar.'))
       .finally(() => active && setLoadingSource(false))
@@ -136,6 +142,8 @@ export default function CompanyVacancyNewPage() {
           city: form.city,
           state: form.state,
           zip_code: form.zip_code,
+          equipment,
+          equipment_notes: equipmentNotes,
           latitude: form.latitude,
           longitude: form.longitude,
           starts_at: toIso(form.starts_at),
@@ -216,6 +224,12 @@ export default function CompanyVacancyNewPage() {
           />
           <p className="sub">JPG, PNG ou WebP, até 5 MB. Aparece na busca e na página da vaga.</p>
         </fieldset>
+        <EquipmentFields
+          value={equipment}
+          notes={equipmentNotes}
+          onChange={setEquipment}
+          onNotesChange={setEquipmentNotes}
+        />
         <fieldset className="bloco">
           <legend>Quando e quanto</legend>
           <div className="grade grade-2">

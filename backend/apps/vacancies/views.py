@@ -22,6 +22,7 @@ from apps.core.models import PlatformParameters
 from apps.core.permissions import IsCompanyUser
 from apps.payments import services as payments
 from apps.payments.models import Custody, LedgerEntry
+from apps.vacancies import equipment as equipment_rules
 from apps.vacancies import favorites, photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
 from apps.vacancies.review_services import company_rating_summary
@@ -66,6 +67,23 @@ class VacancySerializer(serializers.Serializer):
     )
     # Vaga duplicada (US25): os campos vêm do formulário; daqui só se copia a foto.
     duplicate_of = serializers.IntegerField(required=False, min_value=1)
+    # EPIs, uniforme e ferramentas (US22).
+    equipment = serializers.JSONField(required=False)
+    equipment_notes = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False)
+
+    def validate_equipment(self, value):
+        return clean_or_400(equipment_rules.clean_equipment, value)
+
+    def validate_equipment_notes(self, value):
+        return clean_or_400(equipment_rules.clean_notes, value)
+
+
+def clean_or_400(cleaner, value):
+    """Regra de domínio dentro do serializer: a mensagem vira erro de validação (400)."""
+    try:
+        return cleaner(value)
+    except DomainError as error:
+        raise serializers.ValidationError(str(error)) from None
 
 
 DUPLICATE_NOT_FOUND = "Vaga para duplicar não encontrada."
@@ -115,6 +133,8 @@ def serialize_vacancy(vacancy):
         "created_at": vacancy.created_at.isoformat(),
         "photo_url": photos.photo_url(vacancy),
         "auto_call_waitlist": vacancy.auto_call_waitlist,
+        "equipment": vacancy.equipment,
+        "equipment_notes": vacancy.equipment_notes,
     }
 
 
@@ -260,6 +280,14 @@ class VacancyEditSerializer(serializers.Serializer):
     )
     starts_at = serializers.DateTimeField(required=False)
     ends_at = serializers.DateTimeField(required=False)
+    equipment = serializers.JSONField(required=False)
+    equipment_notes = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False)
+
+    def validate_equipment(self, value):
+        return clean_or_400(equipment_rules.clean_equipment, value)
+
+    def validate_equipment_notes(self, value):
+        return clean_or_400(equipment_rules.clean_notes, value)
 
 
 READ_ONLY_FIELDS = ("pay_per_person_cents", "positions")

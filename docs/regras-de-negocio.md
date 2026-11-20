@@ -51,6 +51,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 ## 4. Vagas (catálogo da empresa)
 
 - Campos obrigatórios: título, categoria, descrição do escopo, endereço com ponto no mapa, início, fim, valor por pessoa (≥ R$ 1,00) e número de pessoas (≥ 1).
+- **EPIs, uniforme e ferramentas (US22, opcional):** a empresa marca itens de uma lista fixa (capacete, luvas, botina, óculos de proteção, protetor auricular, colete refletivo, uniforme, calça preta, camisa branca, sapato social, ferramentas próprias) e, para cada um, se o prestador leva ou a empresa fornece, com observações de até 300 caracteres. O prestador vê, no detalhe da vaga, "Você precisa levar" e "Fornecido pela empresa"; sem itens nem observações, o bloco não aparece. Itens fora da lista são recusados. Os itens seguem as regras de edição da vaga e a alteração fica em `VacancyChange`. Controle de entrega de EPI e termo assinado ficam fora.
 - As horas do turno são as do anúncio; o pagamento é o **valor fixo do turno**, não por hora trabalhada.
 - A vaga só é publicada **depois** do pagamento (custódia).
 - **Editar ou remover** só enquanto nenhuma candidatura tiver sido aprovada. A remoção gera estorno total e expira as candidaturas pendentes, avisando os candidatos. Só vagas `PUBLICADA` podem ser editadas ou removidas (não em `CANDIDATURAS_ENCERRADAS`).

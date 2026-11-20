@@ -13,6 +13,7 @@ from apps.companies.public import company_summary
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies.application_services import has_overlap
+from apps.vacancies.equipment import for_worker as equipment_for_worker
 from apps.vacancies.models import Application, Assignment, FavoriteVacancy, Vacancy
 from apps.vacancies.photos import photo_url
 from apps.vacancies.review_services import company_rating
@@ -222,6 +223,7 @@ def serialize_detail(vacancy, user, now=None):
             "latitude": str(vacancy.latitude),
             "longitude": str(vacancy.longitude),
             "rules": serialize_rules(params),
+            "equipment": equipment_for_worker(vacancy),
             "company": company_summary(vacancy.company, now),
             "apply_blocker": apply_blocker(user, now, vacancy),
             "my_application": (
