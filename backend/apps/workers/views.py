@@ -17,7 +17,7 @@ from apps.companies.views import digits_only, first_error
 from apps.core.exceptions import DomainError
 from apps.core.masking import mask_phone
 from apps.core.validators import is_valid_cpf
-from apps.workers import profile, services
+from apps.workers import profile, services, skills
 from apps.workers.models import Worker, WorkerDocument
 
 KINDS = list(WorkerDocument.Kind)
@@ -58,7 +58,7 @@ def serialize_worker(worker):
     steps = services.profile_steps(worker)
     uploaded = set(worker.documents.values_list("kind", flat=True))
     awaiting = (
-        all(step["done"] for step in steps)
+        all(step["done"] for step in steps if not step.get("optional"))
         and worker.verification_status == Worker.VerificationStatus.IN_REVIEW
     )
     return {
@@ -90,6 +90,8 @@ def serialize_worker(worker):
         ),
         "stats": profile.worker_stats(worker),
         "reviews": profile.recent_reviews(worker),
+        "skills": skills.serialize_skills(worker.skills),
+        "bio": worker.bio,
         "profile_steps": steps,
         "verification_message": "Aguardando verificação" if awaiting else "",
     }
@@ -121,6 +123,9 @@ class WorkerRegisterView(APIView):
         return Response(serialize_worker(worker), status=201)
 
 
+PROFILE_FIELDS = {"skills", "bio"}
+
+
 class WorkerMeView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -129,6 +134,23 @@ class WorkerMeView(APIView):
         worker = worker_or_403(request)
         if worker is None:
             return Response({"detail": RESTRICTED}, status=403)
+        return Response(serialize_worker(worker))
+
+    @method_decorator(csrf_protect)
+    def patch(self, request):
+        """Habilidades e resumo da experiência (US08). Só os campos enviados mudam."""
+        worker = worker_or_403(request)
+        if worker is None:
+            return Response({"detail": RESTRICTED}, status=403)
+        changes = {key: value for key, value in request.data.items() if key in PROFILE_FIELDS}
+        if set(request.data) - PROFILE_FIELDS:
+            return Response(
+                {"detail": "Aqui só é possível alterar as habilidades e o resumo."}, status=400
+            )
+        try:
+            worker = skills.update_skills(worker, changes)
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=400)
         return Response(serialize_worker(worker))
 
 

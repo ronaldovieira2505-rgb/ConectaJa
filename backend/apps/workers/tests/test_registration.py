@@ -169,6 +169,12 @@ def test_painel_complete_seu_perfil_mostra_status_das_etapas():
             "status": "PENDENTE_DOCUMENTOS",
         },
         {"key": "pix", "label": "Chave PIX", "done": False},
+        {
+            "key": "habilidades",
+            "label": "Habilidades e experiência",
+            "done": False,
+            "optional": True,
+        },
     ]
 
 

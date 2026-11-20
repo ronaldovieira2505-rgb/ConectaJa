@@ -49,7 +49,9 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `suspended_until` | preenchido por suspensão automática ou manual |
 | `suspension_indefinite` | `true` = suspensão manual por tempo indeterminado (US76); `suspended_until` fica vazio e só a reativação encerra |
 | `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |
-| `skills`, `availability`, portfólio | [pós-MVP: US08–US10] |
+| `skills` | lista de até 7 categorias de vaga em que o prestador tem experiência (US08), sem repetição |
+| `bio` | resumo da experiência, até 500 caracteres, sem e-mail nem telefone (US08) |
+| `availability`, portfólio | [pós-MVP: US09–US10] |
 
 ### WorkerDocument
 `worker`, `kind` (`DOC_FRENTE`, `DOC_VERSO`, `SELFIE`), `file` (**armazenamento privado**, nunca URL pública; acesso só pelo dono e pelo admin), `uploaded_at`.
