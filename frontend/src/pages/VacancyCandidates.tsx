@@ -157,6 +157,7 @@ export default function VacancyCandidatesSection({
               </p>
             )}
             {c.bio && <p className="descricao">{c.bio}</p>}
+            {c.availability_summary && <p className="sub">Disponível: {c.availability_summary}</p>}
             <PortfolioThumbs photos={c.portfolio ?? []} name={c.name} />
             <p>
               {c.completed_shifts} turnos concluídos · {c.no_shows_30d ?? 0}{' '}

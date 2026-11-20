@@ -12,9 +12,18 @@ interface Filters {
   date_from: string
   date_to: string
   min_pay: string
+  // "Só nos meus horários" (US10): '1' ligado, '' desligado.
+  my_schedule: string
 }
 
-const EMPTY: Filters = { q: '', category: '', date_from: '', date_to: '', min_pay: '' }
+const EMPTY: Filters = {
+  q: '',
+  category: '',
+  date_from: '',
+  date_to: '',
+  min_pay: '',
+  my_schedule: '',
+}
 
 /** Filtros que chegam pelo endereço (busca e categorias da página inicial). */
 function filtersFromUrl(params: URLSearchParams): Filters {
@@ -35,6 +44,7 @@ function buildQuery(filters: Filters, origin: Origin): string {
   if (filters.date_from) params.set('date_from', filters.date_from)
   if (filters.date_to) params.set('date_to', filters.date_to)
   if (filters.min_pay) params.set('min_pay', String(Math.round(Number(filters.min_pay) * 100)))
+  if (filters.my_schedule) params.set('my_schedule', '1')
   if (origin) {
     params.set('lat', origin.lat.toFixed(6))
     params.set('lng', origin.lng.toFixed(6))
@@ -55,6 +65,8 @@ export default function VacancySearchPage() {
   // Consulta cujo resultado está na tela; se for diferente da atual, a busca está atualizando.
   const [loadedQuery, setLoadedQuery] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  // O servidor diz se o prestador logado marcou disponibilidade (US10).
+  const [scheduleAvailable, setScheduleAvailable] = useState(false)
 
   useEffect(() => {
     if (!('geolocation' in navigator)) return
@@ -69,10 +81,11 @@ export default function VacancySearchPage() {
 
   useEffect(() => {
     let active = true
-    api<{ results: VacancyCard[] }>(`/api/vacancies/${query}`)
+    api<{ results: VacancyCard[]; my_schedule_available?: boolean }>(`/api/vacancies/${query}`)
       .then((data) => {
         if (!active) return
         setResults(data.results)
+        setScheduleAvailable(Boolean(data.my_schedule_available))
         setError('')
       })
       .catch((err: Error) => active && setError(err.message))
@@ -93,9 +106,13 @@ export default function VacancySearchPage() {
   }
 
   // Filtros além do texto: no celular ficam recolhidos e o botão mostra quantos estão ativos.
-  const activeExtras = [filters.category, filters.date_from, filters.date_to, filters.min_pay].filter(
-    Boolean,
-  ).length
+  const activeExtras = [
+    filters.category,
+    filters.date_from,
+    filters.date_to,
+    filters.min_pay,
+    filters.my_schedule,
+  ].filter(Boolean).length
 
   const hasAnyFilter = [draft, filters].some((f) => Object.values(f).some(Boolean))
 
@@ -134,6 +151,16 @@ export default function VacancySearchPage() {
                 value={draft.min_pay}
                 onChange={set('min_pay')}
               />
+              {scheduleAvailable && (
+                <label className="self-end">
+                  <input
+                    type="checkbox"
+                    checked={draft.my_schedule === '1'}
+                    onChange={(e) => setDraft({ ...draft, my_schedule: e.target.checked ? '1' : '' })}
+                  />{' '}
+                  Só nos meus horários
+                </label>
+              )}
             </div>
           </div>
           <div className="acoes">

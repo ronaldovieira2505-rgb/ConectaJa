@@ -17,6 +17,8 @@ from apps.vacancies.equipment import for_worker as equipment_for_worker
 from apps.vacancies.models import Application, Assignment, FavoriteVacancy, Vacancy
 from apps.vacancies.photos import photo_url
 from apps.vacancies.review_services import company_rating
+from apps.workers.availability import has_availability
+from apps.workers.availability import matches as schedule_matches
 from apps.workers.models import Worker
 from integrations.geo import haversine_distance_m
 
@@ -96,13 +98,18 @@ def parse_filters(params):
     filters["origin"] = (
         (_parse_coordinate(lat, "lat", 90), _parse_coordinate(lng, "lng", 180)) if lat else None
     )
+    # "Só nos meus horários" (US10): vale só para prestador com disponibilidade marcada.
+    filters["my_schedule"] = (params.get("my_schedule") or "").lower() in ("1", "true")
     return filters
 
 
-def search(params, now=None):
+def search(params, now=None, worker=None):
     """Aplica busca e filtros (todos combinados) e ordena por distância ou por início."""
     now = now or timezone.now()
     filters = parse_filters(params)
+    schedule = worker if (
+        filters["my_schedule"] and worker is not None and has_availability(worker)
+    ) else None
     fee = PlatformParameters.get()
     term = normalize(filters["q"])
     results = []
@@ -114,6 +121,8 @@ def search(params, now=None):
             if term not in haystack:
                 continue
         if filters["category"] and vacancy.category != filters["category"]:
+            continue
+        if schedule is not None and not schedule_matches(schedule, vacancy.starts_at):
             continue
         local_day = vacancy.starts_at.astimezone(LOCAL_TZ).date()
         if filters["date_from"] and local_day < filters["date_from"]:

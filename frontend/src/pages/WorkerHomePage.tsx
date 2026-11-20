@@ -10,6 +10,7 @@ import {
   type MyJobs,
   type WorkerProfile,
 } from '../api'
+import AvailabilityCard from '../components/AvailabilityCard'
 import Avatar from '../components/Avatar'
 import DeleteAccountCard from '../components/DeleteAccountCard'
 import HistoryItem from '../components/HistoryItem'
@@ -172,6 +173,8 @@ export default function WorkerHomePage() {
       )}
 
       <SkillsCard profile={profile} onSaved={setProfile} />
+
+      <AvailabilityCard profile={profile} onSaved={setProfile} />
 
       <PortfolioCard
         photos={profile.portfolio ?? []}

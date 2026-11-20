@@ -87,6 +87,15 @@ class Worker(models.Model):
         blank=True,
         help_text="Sem e-mail nem telefone: o contato só é liberado depois da alocação.",
     )
+    availability_days = models.JSONField(
+        "dias disponíveis", default=list, blank=True, help_text="SEG a DOM (US10)."
+    )
+    availability_periods = models.JSONField(
+        "faixas disponíveis",
+        default=list,
+        blank=True,
+        help_text="MANHA (6h–12h), TARDE (12h–18h), NOITE (18h–6h) (US10).",
+    )
     created_at = models.DateTimeField("criado em", auto_now_add=True)
 
     class Meta:
