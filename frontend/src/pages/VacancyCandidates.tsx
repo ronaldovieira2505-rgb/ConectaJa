@@ -145,6 +145,17 @@ export default function VacancyCandidatesSection({
               <Avatar src={c.photo_url} name={c.name} className="size-12" />
               <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}
             </div>
+            {(c.skills ?? []).length > 0 && (
+              <p className="marcadores" aria-label={`Experiência de ${c.name}`}>
+                {(c.skills ?? []).map((skill) => (
+                  <Badge key={skill.value} tone={skill.matches_vacancy ? 'info' : 'neutral'}>
+                    {skill.label}
+                    {skill.matches_vacancy && ' · categoria da vaga'}
+                  </Badge>
+                ))}
+              </p>
+            )}
+            {c.bio && <p className="descricao">{c.bio}</p>}
             <p>
               {c.completed_shifts} turnos concluídos · {c.no_shows_30d ?? 0}{' '}
               {(c.no_shows_30d ?? 0) === 1 ? 'falta' : 'faltas'} nos últimos{' '}

@@ -103,6 +103,16 @@ export interface ProfileStep {
   label: string
   done: boolean
   status?: string
+  // Etapa que não bloqueia a candidatura (habilidades, US08).
+  optional?: boolean
+}
+
+/** Categoria em que o prestador tem experiência (US08). */
+export interface SkillTag {
+  value: string
+  label: string
+  // Na lista de candidatos: a categoria é a mesma da vaga.
+  matches_vacancy?: boolean
 }
 
 export interface WorkerProfile {
@@ -121,6 +131,9 @@ export interface WorkerProfile {
   documents?: WorkerDocumentInfo[]
   stats?: WorkerStats
   reviews?: WorkerReview[]
+  // Habilidades e experiência (US08).
+  skills?: SkillTag[]
+  bio?: string
 }
 
 export interface AppNotification {
@@ -181,6 +194,9 @@ export interface Candidate {
   rating_avg?: number | null
   rating_count?: number
   recent_reviews?: CandidateReview[]
+  // Habilidades e resumo (US08); vazios quando o prestador não informou.
+  skills?: SkillTag[]
+  bio?: string
   applied_at: string
   // Posição na lista de espera (US43); null enquanto a equipe não está completa.
   waitlist_position?: number | null

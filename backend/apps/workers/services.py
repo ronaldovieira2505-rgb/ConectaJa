@@ -64,7 +64,10 @@ def register_worker(*, full_name, cpf, phone, birth_date, email, password):
 
 
 def profile_steps(worker):
-    """Passo a passo "Complete seu perfil" com o status de cada etapa."""
+    """Passo a passo "Complete seu perfil" com o status de cada etapa.
+
+    Etapas `optional` (habilidades, US08) não contam para liberar a candidatura.
+    """
     documents_done = worker.verification_status in (S.IN_REVIEW, S.APPROVED)
     return [
         {
@@ -74,6 +77,12 @@ def profile_steps(worker):
             "status": worker.verification_status,
         },
         {"key": "pix", "label": "Chave PIX", "done": bool(worker.pix_key)},
+        {
+            "key": "habilidades",
+            "label": "Habilidades e experiência",
+            "done": bool(worker.skills or worker.bio),
+            "optional": True,
+        },
     ]
 
 

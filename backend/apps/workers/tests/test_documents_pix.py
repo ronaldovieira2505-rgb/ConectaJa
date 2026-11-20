@@ -392,7 +392,7 @@ def test_painel_mostra_as_duas_etapas_concluidas_e_aguardando_verificacao():
 
     body = client.get("/api/workers/me/").json()
 
-    assert [step["done"] for step in body["profile_steps"]] == [True, True]
+    assert [step["done"] for step in body["profile_steps"]] == [True, True, False]
     assert body["verification_status"] == "EM_ANALISE"
     assert body["verification_message"] == "Aguardando verificação"
     assert body["pix_key"] == "***.456.789-**"
@@ -406,5 +406,5 @@ def test_painel_sem_pix_nao_mostra_aguardando_verificacao():
 
     body = client.get("/api/workers/me/").json()
 
-    assert [step["done"] for step in body["profile_steps"]] == [True, False]
+    assert [step["done"] for step in body["profile_steps"]] == [True, False, False]
     assert body["verification_message"] == ""
