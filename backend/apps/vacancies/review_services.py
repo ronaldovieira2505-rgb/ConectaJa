@@ -11,6 +11,7 @@ from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters, StateTransition
 from apps.core.notifications import notify, notify_company
 from apps.vacancies.models import Assignment, Review
+from apps.workers import levels
 
 S = Assignment.Status
 D = Review.Direction
@@ -207,6 +208,7 @@ def review_worker(assignment, *, author, rating, comment="", now=None):
         f"{rating} de 5 estrelas.",
         link="/meus-trabalhos",
     )
+    levels.recalculate(assignment.worker, reason="Nova avaliação", now=now)
     return review
 
 

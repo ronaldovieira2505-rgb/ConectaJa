@@ -14,6 +14,7 @@ import AlertsCard from '../components/AlertsCard'
 import AvailabilityCard from '../components/AvailabilityCard'
 import Avatar from '../components/Avatar'
 import DeleteAccountCard from '../components/DeleteAccountCard'
+import LevelBadge from '../components/LevelBadge'
 import HistoryItem from '../components/HistoryItem'
 import PortfolioCard from '../components/PortfolioCard'
 import SkillsCard from '../components/SkillsCard'
@@ -95,6 +96,7 @@ export default function WorkerHomePage() {
             <h1 className="m-0">{profile.full_name}</h1>
             <p className="marcadores m-0">
               <Badge tone={verification.tone}>{verification.label}</Badge>
+              <LevelBadge code={profile.level?.code} label={profile.level?.label} />
               {profile.member_since && (
                 <Badge>Desde {formatMonthYear(profile.member_since)}</Badge>
               )}
@@ -128,6 +130,16 @@ export default function WorkerHomePage() {
               </dd>
             </div>
           </dl>
+        )}
+        {profile.level?.next?.summary && (
+          <p className="sub" aria-label="Próximo nível">
+            {profile.level.next.summary}.
+          </p>
+        )}
+        {profile.level && !profile.level.next && (
+          <p className="sub" aria-label="Próximo nível">
+            Você está no nível mais alto. Parabéns!
+          </p>
         )}
         {profile.verification_message && <Alert tone="info">{profile.verification_message}</Alert>}
       </Card>

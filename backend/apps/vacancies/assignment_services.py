@@ -14,6 +14,7 @@ from apps.payments import services as payments
 from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Assignment
 from apps.vacancies.state_machine import ASSIGNMENT_MACHINE
+from apps.workers import levels
 from apps.workers.services import apply_automatic_suspension
 from integrations.geo import haversine_distance_m
 
@@ -112,6 +113,7 @@ def mark_no_show(assignment, *, now=None, actor=None, reason="Sem check-in dentr
         f"Um prestador não compareceu a “{vacancy.title}”. A vaga foi reaberta.",
     )
     apply_automatic_suspension(assignment.worker, now=now)
+    levels.recalculate(assignment.worker, reason="Falta registrada", now=now)
     waitlist.call_from_waitlist(vacancy, was_full=was_full, now=now)
     return assignment
 
@@ -435,6 +437,8 @@ def cancel_by_worker(assignment, *, actor=None, now=None):
             f"por {params.late_cancel_block_days} dias.",
             link="/meus-trabalhos",
         )
+        # Rebaixamento de status (US72/US65): o cancelamento tardio derruba um nível na hora.
+        levels.recalculate(worker, reason="Cancelamento tardio", now=now)
     else:
         notify(
             worker.user,
@@ -462,6 +466,7 @@ def settle(assignment, *, now=None):
     assignment = transition(
         assignment, ASSIGNMENT_MACHINE, S.PAID, reason="Liquidação do turno", now=now
     )
+    levels.recalculate(assignment.worker, reason="Turno pago", now=now)
     notify(
         assignment.worker.user,
         "PAGAMENTO_LIBERADO",
