@@ -56,7 +56,14 @@ def can_worker_review(assignment, *, now=None, params=None):
 
 
 def reviewer_display_name(worker):
-    """Nome do prestador sem sobrenome completo (padrão "Ana S."); nunca expõe o CPF."""
+    """Nome do prestador sem sobrenome completo (padrão "Ana S."); nunca expõe o CPF.
+
+    Conta excluída (US11) aparece como "Prestador removido".
+    """
+    from apps.workers.deletion import REMOVED_NAME
+
+    if worker.full_name == REMOVED_NAME:
+        return REMOVED_NAME
     parts = (worker.full_name or "").split()
     if not parts:
         return "Prestador"

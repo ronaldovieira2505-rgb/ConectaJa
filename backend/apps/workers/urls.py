@@ -1,8 +1,9 @@
 from django.urls import path
 
-from . import views
+from . import deletion_views, views
 
 urlpatterns = [
+    path("workers/me/delete/", deletion_views.WorkerDeleteView.as_view(), name="worker-delete"),
     path("workers/register/", views.WorkerRegisterView.as_view(), name="worker-register"),
     path("workers/me/", views.WorkerMeView.as_view(), name="worker-me"),
     path("workers/me/documents/", views.WorkerDocumentsView.as_view(), name="worker-documents"),

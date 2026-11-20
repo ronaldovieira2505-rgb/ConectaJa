@@ -6,6 +6,8 @@ export interface AuthState {
   loading: boolean
   login: (email: string, password: string) => Promise<User>
   logout: () => Promise<void>
+  /** Esquece o usuário sem chamar a API: a sessão já terminou no servidor (ex.: conta excluída). */
+  forget: () => void
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

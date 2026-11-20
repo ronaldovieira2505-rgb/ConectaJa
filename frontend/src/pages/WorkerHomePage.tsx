@@ -11,6 +11,7 @@ import {
   type WorkerProfile,
 } from '../api'
 import Avatar from '../components/Avatar'
+import DeleteAccountCard from '../components/DeleteAccountCard'
 import HistoryItem from '../components/HistoryItem'
 import { Alert, Badge, Card, Loading } from '../components/ui'
 import type { Tone } from '../status'
@@ -264,6 +265,8 @@ export default function WorkerHomePage() {
           </ul>
         </Card>
       )}
+
+      <DeleteAccountCard />
     </>
   )
 }

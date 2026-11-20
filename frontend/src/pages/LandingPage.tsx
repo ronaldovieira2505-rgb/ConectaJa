@@ -1,7 +1,9 @@
 import { ArrowRight, Building2, HardHat } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { api, type VacancyCard } from '../api'
+import { useAuth } from '../authContext'
+import { Alert } from '../components/ui'
 import CategoryGrid from '../components/landing/CategoryGrid'
 import Disclosure, { type DisclosureItem } from '../components/landing/Disclosure'
 import HomeSearch from '../components/landing/HomeSearch'
@@ -73,7 +75,17 @@ const SECTION_TITLE = 'mb-5 text-[22px] leading-7'
 
 /** Página inicial pública: busca, categorias e vitrine de vagas, como numa loja. */
 export default function LandingPage() {
+  const location = useLocation()
+  const { forget } = useAuth()
+  // Conta recém-excluída (US11): estado interno da navegação, não dá para digitar na URL.
+  const accountDeleted = Boolean(
+    (location.state as { accountDeleted?: boolean } | null)?.accountDeleted,
+  )
   const [vacancies, setVacancies] = useState<VacancyCard[]>([])
+
+  useEffect(() => {
+    if (accountDeleted) forget()
+  }, [accountDeleted, forget])
 
   useEffect(() => {
     let active = true
@@ -87,6 +99,11 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col gap-12 md:gap-16">
+      {accountDeleted && (
+        <Alert tone="success">
+          Sua conta foi excluída e seus dados pessoais foram apagados.
+        </Alert>
+      )}
       <HomeSearch />
       <CategoryGrid vacancies={vacancies} />
       <OpenVacancies vacancies={vacancies} />
