@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import profile_views, views
+from . import profile_views, public_views, views
 
 urlpatterns = [
     path("cnpj/<str:cnpj>/", views.CnpjLookupView.as_view(), name="cnpj-lookup"),
@@ -11,5 +11,10 @@ urlpatterns = [
         "companies/<int:pk>/logo/",
         profile_views.CompanyLogoFileView.as_view(),
         name="company-logo-file",
+    ),
+    path(
+        "companies/<int:pk>/public/",
+        public_views.CompanyPublicView.as_view(),
+        name="company-public",
     ),
 ]

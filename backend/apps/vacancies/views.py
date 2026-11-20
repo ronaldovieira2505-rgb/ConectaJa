@@ -22,7 +22,7 @@ from apps.core.models import PlatformParameters
 from apps.core.permissions import IsCompanyUser
 from apps.payments import services as payments
 from apps.payments.models import Custody, LedgerEntry
-from apps.vacancies import photos, search, services
+from apps.vacancies import favorites, photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
 from apps.vacancies.review_services import company_rating_summary
 from integrations.payments import PaymentGatewayError
@@ -64,6 +64,11 @@ class VacancySerializer(serializers.Serializer):
     positions = serializers.IntegerField(
         min_value=1, error_messages={"min_value": "É preciso ao menos 1 pessoa."}
     )
+    # Vaga duplicada (US25): os campos vêm do formulário; daqui só se copia a foto.
+    duplicate_of = serializers.IntegerField(required=False, min_value=1)
+
+
+DUPLICATE_NOT_FOUND = "Vaga para duplicar não encontrada."
 
 
 def _retained_cents(vacancy):
@@ -167,8 +172,13 @@ class VacancyCreateView(PublicReadMixin, CompanyAreaView):
             return Response({"detail": str(error)}, status=400)
         params = PlatformParameters.get()
         ratings = company_rating_summary({v.company_id for v, _ in found})
+        mine = favorites.favorite_ids(request.user)
         return Response(
-            {"results": [search.serialize_card(v, d, params, ratings) for v, d in found]}
+            {
+                "results": [
+                    search.serialize_card(v, d, params, ratings, favorites=mine) for v, d in found
+                ]
+            }
         )
 
     def post(self, request):
@@ -181,12 +191,20 @@ class VacancyCreateView(PublicReadMixin, CompanyAreaView):
             return Response(
                 {"detail": first_error(serializer.errors), "errors": serializer.errors}, status=400
             )
+        fields = dict(serializer.validated_data)
+        source = None
+        duplicate_of = fields.pop("duplicate_of", None)
+        if duplicate_of is not None:
+            # Só a dona duplica: vaga de outra empresa responde como inexistente.
+            source = Vacancy.objects.filter(pk=duplicate_of, company=company).first()
+            if source is None:
+                return Response({"detail": DUPLICATE_NOT_FOUND}, status=404)
         try:
-            vacancy = services.create_vacancy(
-                company=company, actor=request.user, **serializer.validated_data
-            )
+            vacancy = services.create_vacancy(company=company, actor=request.user, **fields)
         except DomainError as error:
             return Response({"detail": str(error)}, status=400)
+        if source is not None:
+            photos.copy_photo(source, vacancy)
         vacancy = self.vacancies(company).get(pk=vacancy.pk)
         return Response(serialize_vacancy(vacancy), status=201)
 

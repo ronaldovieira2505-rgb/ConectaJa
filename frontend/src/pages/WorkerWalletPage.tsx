@@ -1,7 +1,70 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, brl, formatDateTime, formatShift, type Wallet } from '../api'
-import { Alert, Badge, Card, Loading } from '../components/ui'
+import {
+  api,
+  ApiError,
+  brl,
+  downloadFile,
+  formatDateTime,
+  formatShift,
+  saveFile,
+  type Wallet,
+} from '../api'
+import { Alert, Badge, Button, Card, Loading, SelectField } from '../components/ui'
+import {
+  STATEMENT_PERIODS,
+  statementRange,
+  todayInSaoPaulo,
+  type StatementPeriod,
+} from '../period'
+
+/** Extrato em CSV (US61): o prestador escolhe o período e baixa o arquivo. */
+function StatementDownload() {
+  const [period, setPeriod] = useState<StatementPeriod>('current_month')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function download() {
+    setError('')
+    setBusy(true)
+    const { from, to } = statementRange(period, todayInSaoPaulo())
+    try {
+      const file = await downloadFile(
+        `/api/workers/me/statement.csv?from=${from}&to=${to}`,
+        `extrato-conecta-ja-${to.slice(0, 7)}.csv`,
+      )
+      saveFile(file.blob, file.filename)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível baixar o extrato.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section aria-labelledby="carteira-extrato">
+      <h2 id="carteira-extrato">Extrato</h2>
+      <p className="sub">Turnos pagos no período, em planilha (CSV), com valor, taxa e valor recebido.</p>
+      <SelectField
+        label="Período"
+        value={period}
+        onChange={(e) => setPeriod(e.target.value as StatementPeriod)}
+      >
+        {STATEMENT_PERIODS.map((p) => (
+          <option key={p.value} value={p.value}>
+            {p.label}
+          </option>
+        ))}
+      </SelectField>
+      <div className="acoes">
+        <Button variant="secondary" busy={busy} onClick={download}>
+          Baixar extrato
+        </Button>
+      </div>
+      {error && <Alert tone="error">{error}</Alert>}
+    </section>
+  )
+}
 
 /** Carteira do prestador (US60): a receber, liberado e taxas retidas. */
 export default function WorkerWalletPage() {
@@ -36,6 +99,8 @@ export default function WorkerWalletPage() {
           <dd data-testid="total-fees">{brl(totals.fees_cents)}</dd>
         </div>
       </dl>
+
+      <StatementDownload />
 
       <section aria-labelledby="carteira-a-receber">
         <h2 id="carteira-a-receber">A receber</h2>

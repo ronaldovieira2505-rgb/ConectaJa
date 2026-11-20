@@ -278,3 +278,23 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Avaliação #{self.pk} ({self.rating}★)"
+
+
+class FavoriteVacancy(models.Model):
+    """Vaga salva nos favoritos de um prestador (US18). Única por prestador e vaga."""
+
+    worker = models.ForeignKey(
+        "workers.Worker", on_delete=models.CASCADE, related_name="favorite_vacancies"
+    )
+    vacancy = models.ForeignKey(Vacancy, on_delete=models.CASCADE, related_name="favorited_by")
+    created_at = models.DateTimeField("salva em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "vaga favorita"
+        verbose_name_plural = "vagas favoritas"
+        constraints = [
+            models.UniqueConstraint(fields=["worker", "vacancy"], name="unique_favorite_vacancy")
+        ]
+
+    def __str__(self):
+        return f"Favorita #{self.pk}"

@@ -28,18 +28,44 @@ export async function api<T>(
     credentials: 'same-origin',
     body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
   })
-  if (!response.ok) {
-    let detail = 'Não foi possível concluir a operação.'
-    try {
-      const data = (await response.json()) as { detail?: string }
-      if (data.detail) detail = data.detail
-    } catch {
-      // resposta sem JSON: mantém a mensagem padrão
-    }
-    throw new ApiError(response.status, detail)
-  }
+  if (!response.ok) throw await errorFrom(response)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
+}
+
+async function errorFrom(response: Response): Promise<ApiError> {
+  let detail = 'Não foi possível concluir a operação.'
+  try {
+    const data = (await response.json()) as { detail?: string }
+    if (data.detail) detail = data.detail
+  } catch {
+    // resposta sem JSON: mantém a mensagem padrão
+  }
+  return new ApiError(response.status, detail)
+}
+
+/** Baixa um arquivo da API (ex.: extrato CSV). O nome vem do `Content-Disposition`. */
+export async function downloadFile(
+  path: string,
+  fallbackName: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch(path, { credentials: 'same-origin' })
+  if (!response.ok) throw await errorFrom(response)
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const match = disposition.match(/filename="?([^";]+)"?/)
+  return { blob: await response.blob(), filename: match ? match[1] : fallbackName }
+}
+
+/** Entrega o arquivo ao navegador como download. */
+export function saveFile(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }
 
 export type Role = 'COMPANY' | 'WORKER' | 'ADMIN'
@@ -77,6 +103,16 @@ export interface ProfileStep {
   label: string
   done: boolean
   status?: string
+  // Etapa que não bloqueia a candidatura (habilidades, US08).
+  optional?: boolean
+}
+
+/** Categoria em que o prestador tem experiência (US08). */
+export interface SkillTag {
+  value: string
+  label: string
+  // Na lista de candidatos: a categoria é a mesma da vaga.
+  matches_vacancy?: boolean
 }
 
 export interface WorkerProfile {
@@ -95,6 +131,9 @@ export interface WorkerProfile {
   documents?: WorkerDocumentInfo[]
   stats?: WorkerStats
   reviews?: WorkerReview[]
+  // Habilidades e experiência (US08).
+  skills?: SkillTag[]
+  bio?: string
 }
 
 export interface AppNotification {
@@ -119,8 +158,12 @@ export interface Vacancy {
   category_label: string
   description: string
   street: string
+  number?: string
+  complement?: string
+  district?: string
   city: string
   state: string
+  zip_code?: string
   latitude: string
   longitude: string
   starts_at: string
@@ -155,6 +198,9 @@ export interface Candidate {
   rating_avg?: number | null
   rating_count?: number
   recent_reviews?: CandidateReview[]
+  // Habilidades e resumo (US08); vazios quando o prestador não informou.
+  skills?: SkillTag[]
+  bio?: string
   applied_at: string
   // Posição na lista de espera (US43); null enquanto a equipe não está completa.
   waitlist_position?: number | null
@@ -209,6 +255,13 @@ export interface VacancyCard {
   photo_url: string | null
   // Média das avaliações da empresa (US64); `average` é null sem avaliações.
   company_rating?: CompanyRating
+  // Salva nos favoritos do prestador logado (US18).
+  favorite?: boolean
+}
+
+/** Item de "Favoritas" (US18): "Encerrada", "Lotada" ou null quando ainda aceita candidaturas. */
+export interface FavoriteCard extends VacancyCard {
+  closed_label: string | null
 }
 
 export interface CompanyRating {
@@ -270,7 +323,37 @@ export function formatDays(days: number): string {
   return days === 1 ? '1 dia' : `${days} dias`
 }
 
+/** O que o prestador vê da empresa (US15): sem CNPJ, contato, endereço completo ou valores. */
+export interface CompanySummary {
+  id: number
+  name: string
+  logo_url: string | null
+  district: string
+  city: string
+  state: string
+  member_since: string
+  rating: CompanyRating
+  completed_shifts: number
+  description: string
+  profile_available: boolean
+}
+
+export interface CompanyPublicReview {
+  id: number
+  rating: number
+  comment: string
+  created_at: string
+  reviewer: string
+}
+
+/** Página pública da empresa (US15). */
+export interface CompanyPublicProfile extends CompanySummary {
+  open_vacancies: VacancyCard[]
+  recent_reviews: CompanyPublicReview[]
+}
+
 export interface VacancyPublicDetail extends VacancyCard {
+  company?: CompanySummary
   rules: VacancyRules
   description: string
   street: string

@@ -49,7 +49,9 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `suspended_until` | preenchido por suspensão automática ou manual |
 | `suspension_indefinite` | `true` = suspensão manual por tempo indeterminado (US76); `suspended_until` fica vazio e só a reativação encerra |
 | `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |
-| `skills`, `availability`, portfólio | [pós-MVP: US08–US10] |
+| `skills` | lista de até 7 categorias de vaga em que o prestador tem experiência (US08), sem repetição |
+| `bio` | resumo da experiência, até 500 caracteres, sem e-mail nem telefone (US08) |
+| `availability`, portfólio | [pós-MVP: US09–US10] |
 
 ### WorkerDocument
 `worker`, `kind` (`DOC_FRENTE`, `DOC_VERSO`, `SELFIE`), `file` (**armazenamento privado**, nunca URL pública; acesso só pelo dono e pelo admin), `uploaded_at`.
@@ -104,7 +106,10 @@ Invariante: `RETENCAO = REPASSE + TAXA + ESTORNO` quando a custódia é encerrad
 Todos os prazos, limites e taxas de `docs/regras-de-negocio.md`. Editável pelo admin (US79). O código **sempre** lê daqui.
 
 ### Notification — notificações dentro do app
-`user`, `kind`, `title`, `message`, `link`, `read_at`, `created_at`. Sem e-mail ou push no MVP.
+`user`, `kind`, `title`, `message`, `link`, `dedup_key` (opcional e único: aviso que só pode sair uma vez, como o lembrete de um turno, US49), `read_at`, `created_at`. Sem e-mail ou push no MVP.
+
+### FavoriteVacancy — vaga favorita (US18)
+`worker`, `vacancy`, `created_at`. Única por (`worker`, `vacancy`): favoritar de novo não duplica. Só vagas que já apareceram na busca (`PUBLICADA`, `CANDIDATURAS_ENCERRADAS`, `EM_ANDAMENTO`) podem ser favoritadas; depois de encerrada, cancelada ou lotada, a vaga continua na lista com o selo "Encerrada" ou "Lotada". Cada prestador só vê as próprias favoritas.
 
 ### Review — avaliação bilateral [pós-MVP: US63/US64]
 `assignment`, `direction` (`EMPRESA_PARA_PRESTADOR` (US63) e `PRESTADOR_PARA_EMPRESA` (US64)), `author` (usuário), `rating` (1 a 5), `comment` (opcional, até 500 caracteres), `created_at`. Única por (`assignment`, `direction`). Definitiva: não há edição nem exclusão. Não obrigatória; conta para o status [pós-MVP].

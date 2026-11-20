@@ -95,6 +95,16 @@ urlpatterns = [
         name="company-assignments-pending",
     ),
     path("workers/me/jobs/", worker_views.WorkerJobsView.as_view(), name="worker-jobs"),
+    path(
+        "workers/me/favorites/",
+        worker_views.WorkerFavoritesView.as_view(),
+        name="worker-favorites",
+    ),
+    path(
+        "vacancies/<int:pk>/favorite/",
+        worker_views.VacancyFavoriteView.as_view(),
+        name="vacancy-favorite",
+    ),
     path("vacancies/", views.VacancyCreateView.as_view(), name="vacancy-create"),
     path("vacancies/<int:pk>/", views.VacancyDetailView.as_view(), name="vacancy-detail"),
     path("vacancies/<int:pk>/photo/", views.VacancyPhotoView.as_view(), name="vacancy-photo"),

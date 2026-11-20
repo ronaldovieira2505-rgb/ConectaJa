@@ -13,6 +13,7 @@ from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from apps.workers.models import Worker, WorkerDocument
+from apps.workers.skills import serialize_skills
 
 NOT_FOUND = "Candidatura não encontrada."
 
@@ -42,6 +43,9 @@ def serialize_candidate(application, params=None):
         "rating_avg": rating["average"],
         "rating_count": rating["count"],
         "recent_reviews": reviews.worker_recent_reviews(worker),
+        # Habilidades (US08): a categoria da vaga vem destacada quando o candidato a marcou.
+        "skills": serialize_skills(worker.skills, application.vacancy.category),
+        "bio": worker.bio,
         "applied_at": application.created_at.isoformat(),
     }
 

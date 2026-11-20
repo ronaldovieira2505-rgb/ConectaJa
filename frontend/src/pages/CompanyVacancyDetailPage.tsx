@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, brl, formatShift, type Vacancy } from '../api'
 import { CATEGORIES } from '../categories'
 import CancelReasonForm from '../components/CancelReasonForm'
@@ -243,6 +243,12 @@ export default function CompanyVacancyDetailPage() {
             <Badge tone={badgeToneFor(vacancy.status)}>{vacancy.status_label}</Badge>
             <Badge>{vacancy.category_label}</Badge>
           </p>
+          {/* Duplicar (US25): abre "Nova vaga" preenchida; nada é criado até confirmar. */}
+          <div className="acoes">
+            <Link to={`/empresa/vagas/nova?duplicar=${vacancy.id}`} className="btn btn-secondary">
+              Duplicar
+            </Link>
+          </div>
           <dl className="fatos">
             <div className="fato-destaque">
               <dt>Total a pagar</dt>

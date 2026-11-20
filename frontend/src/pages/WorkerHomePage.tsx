@@ -13,6 +13,7 @@ import {
 import Avatar from '../components/Avatar'
 import DeleteAccountCard from '../components/DeleteAccountCard'
 import HistoryItem from '../components/HistoryItem'
+import SkillsCard from '../components/SkillsCard'
 import { Alert, Badge, Card, Loading } from '../components/ui'
 import type { Tone } from '../status'
 
@@ -73,7 +74,8 @@ export default function WorkerHomePage() {
   if (error) return <Alert tone="error">{error}</Alert>
   if (!profile) return <Loading rows={2} />
 
-  const pending = profile.profile_steps.filter((step) => !step.done).length
+  // Etapas opcionais (habilidades, US08) não bloqueiam a candidatura.
+  const pending = profile.profile_steps.filter((step) => !step.done && !step.optional).length
   const approved = profile.verification_status === 'APROVADO'
   const verification = VERIFICATION[profile.verification_status] ?? VERIFICATION.PENDENTE_DOCUMENTOS
   const stats = profile.stats
@@ -142,23 +144,33 @@ export default function WorkerHomePage() {
                   ? (DOCUMENT_STATUS[step.status ?? ''] ?? 'Pendente')
                   : step.done
                     ? 'Concluída'
-                    : 'Pendente'
+                    : step.optional
+                      ? 'Opcional'
+                      : 'Pendente'
+              const target =
+                step.key === 'documentos'
+                  ? '/perfil/documentos'
+                  : step.key === 'pix'
+                    ? '/perfil/pix'
+                    : `/prestador/perfil#${step.key}`
               return (
                 <li key={step.key} className={step.done ? 'feita' : ''}>
                   <span className="etapa-num" aria-hidden="true">
                     {index + 1}
                   </span>{' '}
                   <span className="etapa-nome">{step.label}</span>
-                  <Badge tone={step.done ? 'success' : 'warning'}>{label}</Badge>
-                  <Link to={step.key === 'documentos' ? '/perfil/documentos' : '/perfil/pix'}>
-                    {step.done ? 'Ver' : 'Completar'}
-                  </Link>
+                  <Badge tone={step.done ? 'success' : step.optional ? 'neutral' : 'warning'}>
+                    {label}
+                  </Badge>
+                  <Link to={target}>{step.done ? 'Ver' : 'Completar'}</Link>
                 </li>
               )
             })}
           </ol>
         </Card>
       )}
+
+      <SkillsCard profile={profile} onSaved={setProfile} />
 
       <Card>
         <h2>Documentos</h2>

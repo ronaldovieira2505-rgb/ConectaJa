@@ -75,6 +75,18 @@ class Worker(models.Model):
         help_text="Suspensão manual do admin sem data de fim; só termina com a reativação.",
     )
     level = models.CharField("nível", max_length=10, choices=Level.choices, default=Level.NEW)
+    skills = models.JSONField(
+        "habilidades",
+        default=list,
+        blank=True,
+        help_text="Até 7 categorias de vaga em que o prestador tem experiência (US08).",
+    )
+    bio = models.CharField(
+        "resumo da experiência",
+        max_length=500,
+        blank=True,
+        help_text="Sem e-mail nem telefone: o contato só é liberado depois da alocação.",
+    )
     created_at = models.DateTimeField("criado em", auto_now_add=True)
 
     class Meta:

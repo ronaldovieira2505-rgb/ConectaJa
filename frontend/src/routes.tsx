@@ -5,11 +5,13 @@ import Layout from './components/Layout'
 import { Loading } from './components/ui'
 import CompanyConfirmPresencePage from './pages/CompanyConfirmPresencePage'
 import CompanyProfilePage from './pages/CompanyProfilePage'
+import CompanyPublicPage from './pages/CompanyPublicPage'
 import CompanyReviewsPage from './pages/CompanyReviewsPage'
 import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
 import CompanyVacancyDetailPage from './pages/CompanyVacancyDetailPage'
 import CompanyVacancyNewPage from './pages/CompanyVacancyNewPage'
+import FavoritesPage from './pages/FavoritesPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import MyJobsPage from './pages/MyJobsPage'
@@ -55,6 +57,8 @@ export default function AppRoutes() {
         {/* Busca pública: quem não pode se candidatar vê o que falta (US12). */}
         <Route path="vagas" element={<VacancySearchPage />} />
         <Route path="vagas/:id" element={<VacancyPublicDetailPage />} />
+        {/* Perfil público da empresa, aberto a qualquer pessoa (US15). */}
+        <Route path="empresas/:id" element={<CompanyPublicPage />} />
         <Route element={<RequireRole role="COMPANY" />}>
           <Route path="empresa/vagas" element={<CompanyVacanciesPage />} />
           <Route path="empresa/vagas/nova" element={<CompanyVacancyNewPage />} />
@@ -66,6 +70,7 @@ export default function AppRoutes() {
         <Route element={<RequireRole role="WORKER" />}>
           <Route path="prestador/vagas" element={<Navigate to="/vagas" replace />} />
           <Route path="meus-trabalhos" element={<MyJobsPage />} />
+          <Route path="meus-trabalhos/favoritas" element={<FavoritesPage />} />
           <Route path="carteira" element={<WorkerWalletPage />} />
           <Route path="prestador/perfil" element={<WorkerHomePage />} />
           <Route path="perfil/documentos" element={<WorkerDocumentsPage />} />
