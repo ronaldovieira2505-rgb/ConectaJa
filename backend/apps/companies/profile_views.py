@@ -4,6 +4,7 @@ import uuid
 
 from django.db.models import Sum
 from django.http import FileResponse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
@@ -49,6 +50,7 @@ def company_stats(company):
 
 
 def serialize_company(company):
+    suspended = company.is_suspended(timezone.now())
     return {
         "id": company.pk,
         "name": company.trade_name or company.legal_name,
@@ -69,6 +71,8 @@ def serialize_company(company):
         "payment_method_label": company.get_preferred_payment_method_display(),
         "verification_status": company.verification_status,
         "verification_label": company.get_verification_status_display(),
+        "is_suspended": suspended,
+        "suspension_message": company.suspension_message if suspended else "",
         "description": company.description,
         "logo_url": logo_url(company),
         "member_since": company.created_at.isoformat(),

@@ -97,4 +97,11 @@ O que cada um pode fazer antes da aprovação:
 
 ## 6. Suspensão automática do prestador
 
-SISTEMA: ao registrar uma `FALTA`, se o prestador tiver ≥ *2 faltas em 30 dias*, define `suspended_until = agora + duração da suspensão (15 dias)` e o notifica. Suspenso, ele não se candidata e não pode ser aprovado. O admin pode suspender ou reativar manualmente [pós-MVP: US76].
+SISTEMA: ao registrar uma `FALTA`, se o prestador tiver ≥ *2 faltas em 30 dias*, define `suspended_until = agora + duração da suspensão (15 dias)` e o notifica. Suspenso, ele não se candidata e não pode ser aprovado. 
+
+### Suspensão e reativação manual (US76)
+
+O admin suspende prestador ou empresa informando **motivo** (obrigatório) e **1 a 365 dias** ou **tempo indeterminado**; reativa informando motivo, e a suspensão termina na hora (vale também para a automática). Cada ação grava um `StateTransition` (`WorkerSuspension` ou `CompanySuspension`, `ATIVO` ↔ `SUSPENSO`) com o admin como ator e notifica o prestador (ou os membros da empresa) com motivo e data de fim. Não é possível suspender conta já suspensa nem reativar conta ativa.
+
+- **Prestador suspenso:** não se candidata nem pode ser aprovado; as alocações já confirmadas **são mantidas** (decisão do PO).
+- **Empresa suspensa:** não cria nem paga vagas novas e vê "Conta suspensa até ..."; as vagas já publicadas continuam valendo.

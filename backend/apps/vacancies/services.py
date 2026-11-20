@@ -37,6 +37,8 @@ def create_vacancy(*, company, actor=None, now=None, **fields):
     params = PlatformParameters.get()
     if company.verification_status != Company.VerificationStatus.APPROVED:
         raise DomainError("Só empresas aprovadas podem criar vagas.")
+    if company.is_suspended(now):
+        raise DomainError(company.suspension_message)
     if fields["ends_at"] <= fields["starts_at"]:
         raise DomainError("O fim do turno deve ser depois do início.")
     _check_lead_time(fields["starts_at"], now, params)
@@ -53,6 +55,8 @@ def pay_vacancy(vacancy, *, actor=None, now=None):
     """Empresa paga (PSP simulado): custódia RETIDA e vaga PUBLICADA."""
     now = now or timezone.now()
     VACANCY_MACHINE.validate(vacancy.status, V.PUBLISHED)
+    if vacancy.company.is_suspended(now):
+        raise DomainError(vacancy.company.suspension_message)
     _check_lead_time(vacancy.starts_at, now, PlatformParameters.get())
     payments.retain(vacancy.custody, actor=actor, now=now)
     return transition(
