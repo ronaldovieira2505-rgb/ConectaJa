@@ -17,6 +17,7 @@ from apps.vacancies.models import (
     Application,
     ArrivalJustification,
     Assignment,
+    OvertimeRequest,
     Review,
     Vacancy,
     VacancyChange,
@@ -296,3 +297,20 @@ class ArrivalJustificationAdmin(admin.ModelAdmin):
     @admin.action(description="Confirmar falta", permissions=["change"])
     def confirm_no_show(self, request, queryset):
         self._decide(request, queryset, presence=False)
+
+
+@admin.register(OvertimeRequest)
+class OvertimeRequestAdmin(admin.ModelAdmin):
+    """Pedidos de hora extra (US52/US53): só leitura, a trilha fica em StateTransition."""
+
+    list_display = ("id", "assignment", "minutes", "amount_cents", "status", "created_at")
+    list_filter = ("status",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -86,6 +86,15 @@ Estados finais: `PAGA`, `FALTA`, `ESTORNADA`, `CANCELADA_PRESTADOR`, `CANCELADA_
 Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pedido deixa de aparecer para a empresa e não vai para o admin.
 `CONTESTADA` depende de ação do admin. O painel deve destacar contestações abertas há mais de 48 h.
 
+**Pedido de hora extra (US52/US53)** (`OvertimeRequest`; um pendente e no máximo um aceito por alocação):
+
+| De | Evento / ator | Para | Condições e efeitos |
+|---|---|---|---|
+| — | Empresa pede hora extra (US52) | `AGUARDANDO_PRESTADOR` | Alocação `EM_EXECUCAO`, agora < `ends_at`; 30 min a 4 h em passos de 30 min; valor ≥ valor do turno ÷ duração × horas extras. `expires_at` = mín(agora + *prazo de resposta (15 min)*, `ends_at`). Notifica o prestador. Nada é cobrado |
+| `AGUARDANDO_PRESTADOR` | SISTEMA: agora ≥ `expires_at` | `EXPIRADO` | Notifica a empresa. Nada é cobrado. Idempotente |
+| `AGUARDANDO_PRESTADOR` | Prestador aceita (US53) | `ACEITO` | — |
+| `AGUARDANDO_PRESTADOR` | Prestador recusa (US53) | `RECUSADO` | Sem penalidade |
+
 ---
 
 ## 4. Custódia (`Custody`)

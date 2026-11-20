@@ -1,11 +1,12 @@
 """Tabelas de transição de Vaga, Candidatura e Alocação (docs/maquina-de-estados.md)."""
 
 from apps.core.state_machine import StateMachine
-from apps.vacancies.models import Application, Assignment, Vacancy
+from apps.vacancies.models import Application, Assignment, OvertimeRequest, Vacancy
 
 V = Vacancy.Status
 A = Application.Status
 S = Assignment.Status
+OT = OvertimeRequest.Status
 
 VACANCY_MACHINE = StateMachine(
     "Vacancy",
@@ -43,5 +44,16 @@ ASSIGNMENT_MACHINE = StateMachine(
         S.REFUNDED: set(),
         S.CANCELLED_BY_WORKER: set(),
         S.CANCELLED_BY_COMPANY: set(),
+    },
+)
+
+# Pedido de hora extra (US52/US53): só sai de AGUARDANDO_PRESTADOR, uma única vez.
+OVERTIME_MACHINE = StateMachine(
+    "OvertimeRequest",
+    {
+        OT.AWAITING: {OT.ACCEPTED, OT.DECLINED, OT.EXPIRED},
+        OT.ACCEPTED: set(),
+        OT.DECLINED: set(),
+        OT.EXPIRED: set(),
     },
 )

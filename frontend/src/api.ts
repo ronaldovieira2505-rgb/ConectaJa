@@ -228,6 +228,32 @@ export interface TeamMember {
   phone: string
   status: string
   status_label: string
+  // Hora extra (US52): só para quem está em execução.
+  can_request_overtime?: boolean
+  overtime?: OvertimeRequest | null
+  overtime_options?: OvertimeOption[]
+}
+
+/** Duração aceita para a hora extra e o valor mínimo dela (US52). */
+export interface OvertimeOption {
+  minutes: number
+  label: string
+  min_amount_cents: number
+}
+
+/** Pedido de hora extra da empresa para um turno em execução (US52/US53). */
+export interface OvertimeRequest {
+  id: number
+  assignment_id: number
+  minutes: number
+  minutes_label: string
+  amount_cents: number
+  net_cents: number
+  status: 'AGUARDANDO_PRESTADOR' | 'ACEITO' | 'RECUSADO' | 'EXPIRADO'
+  status_label: string
+  created_at: string
+  expires_at: string
+  responded_at: string | null
 }
 
 export interface VacancyCandidates {

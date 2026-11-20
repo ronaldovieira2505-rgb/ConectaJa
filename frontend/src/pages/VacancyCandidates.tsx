@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, ApiError, formatDateTime, type Candidate, type VacancyCandidates } from '../api'
+import {
+  api,
+  ApiError,
+  brl,
+  formatDateTime,
+  formatTime,
+  type Candidate,
+  type TeamMember,
+  type VacancyCandidates,
+} from '../api'
 import Avatar from '../components/Avatar'
 import CancelReasonForm from '../components/CancelReasonForm'
+import OvertimeRequestForm from '../components/OvertimeRequestForm'
 import PortfolioThumbs from '../components/PortfolioThumbs'
 import { Alert, Badge, Button } from '../components/ui'
 
@@ -47,6 +57,24 @@ function CandidateRating({ candidate }: { candidate: Candidate }) {
   )
 }
 
+/** Situação do último pedido de hora extra do turno (US52). */
+function OvertimeStatus({ member }: { member: TeamMember }) {
+  const request = member.overtime
+  if (!request) return null
+  const what = `${request.minutes_label} por ${brl(request.amount_cents)}`
+  if (request.status === 'AGUARDANDO_PRESTADOR') {
+    return (
+      <p className="sub">
+        Hora extra pedida: {what}. Aguardando {member.first_name} até{' '}
+        {formatTime(request.expires_at)}.
+      </p>
+    )
+  }
+  if (request.status === 'ACEITO') return <p className="sub">Hora extra aceita: {what}.</p>
+  if (request.status === 'RECUSADO') return <p className="sub">Hora extra recusada: {what}.</p>
+  return <p className="sub">Pedido de hora extra expirou sem resposta. Nada foi cobrado.</p>
+}
+
 /** Seção "Candidatos" do detalhe da vaga: aprovar, recusar e ver a equipe (US42). */
 export default function VacancyCandidatesSection({
   vacancyId,
@@ -59,6 +87,7 @@ export default function VacancyCandidatesSection({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [cancelling, setCancelling] = useState<number | null>(null)
+  const [askingOvertime, setAskingOvertime] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -107,6 +136,22 @@ export default function VacancyCandidatesSection({
       onChange?.()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível cancelar o turno.')
+    }
+    await load()
+  }
+
+  async function requestOvertime(member: TeamMember, minutes: number, amountCents: number) {
+    setError('')
+    setNotice('')
+    try {
+      await api(`/api/assignments/${member.id}/overtime/`, {
+        method: 'POST',
+        body: { minutes, amount_cents: amountCents },
+      })
+      setAskingOvertime(null)
+      setNotice(`Pedido de hora extra enviado. ${member.first_name} foi avisado.`)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível pedir a hora extra.')
     }
     await load()
   }
@@ -201,6 +246,27 @@ export default function VacancyCandidatesSection({
                       }}
                     >
                       Cancelar
+                    </Button>
+                  ))}
+                <OvertimeStatus member={m} />
+                {m.can_request_overtime &&
+                  (askingOvertime === m.id ? (
+                    <OvertimeRequestForm
+                      options={m.overtime_options ?? []}
+                      onConfirm={(minutes, cents) => requestOvertime(m, minutes, cents)}
+                      onBack={() => setAskingOvertime(null)}
+                    />
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      aria-label={`Pedir hora extra para ${m.first_name}`}
+                      onClick={() => {
+                        setError('')
+                        setNotice('')
+                        setAskingOvertime(m.id)
+                      }}
+                    >
+                      Pedir hora extra
                     </Button>
                   ))}
               </li>

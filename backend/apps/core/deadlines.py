@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
-from apps.vacancies import arrival, reminders
+from apps.vacancies import arrival, overtime, reminders
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import services as vacancies
 from apps.vacancies.models import Assignment, Vacancy
@@ -101,14 +101,22 @@ def process_deadlines(now=None):
 
     _apply(done, "faltas", no_shows, register_no_show)
 
-    # 7. Check-out automático.
+    # 7. Pedido de hora extra sem resposta (US52): expira e nada é cobrado.
+    _apply(
+        done,
+        "horas_extras_expiradas",
+        overtime.overdue(now),
+        lambda r: overtime.expire(r, now=now),
+    )
+
+    # 8. Check-out automático.
     overdue = Assignment.objects.filter(
         status=S.IN_PROGRESS,
         vacancy__ends_at__lt=now - timedelta(minutes=p.auto_checkout_minutes_after_end),
     )
     _apply(done, "checkouts_automaticos", overdue, lambda a: assignments.auto_check_out(a, now=now))
 
-    # 8. Aprovação automática por decurso da janela de contestação.
+    # 9. Aprovação automática por decurso da janela de contestação.
     silent = Assignment.objects.filter(
         status=S.AWAITING_VALIDATION,
         check_out_at__lte=now - timedelta(minutes=p.contest_window_minutes),
@@ -117,7 +125,7 @@ def process_deadlines(now=None):
         done, "aprovacoes_automaticas", silent, lambda a: assignments.auto_approve_hours(a, now=now)
     )
 
-    # 9. Liquidação.
+    # 10. Liquidação.
     _apply(
         done,
         "liquidacoes",
@@ -125,7 +133,7 @@ def process_deadlines(now=None):
         lambda a: assignments.settle(a, now=now),
     )
 
-    # 10. Finalização das vagas.
+    # 11. Finalização das vagas.
     # Só as que já podem fechar: uma vaga com turno à espera de validação não é erro, e
     # tentar finalizá-la a cada execução só enchia o log de avisos.
     in_progress = [

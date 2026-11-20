@@ -1,6 +1,7 @@
 """API da empresa para selecionar candidatos: listar, aprovar e recusar (US42)."""
 
 from django.http import FileResponse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework.response import Response
@@ -11,6 +12,7 @@ from apps.vacancies import application_services as applications
 from apps.vacancies import review_services as reviews
 from apps.vacancies import waitlist_services as waitlist
 from apps.vacancies.models import Application, Assignment, Vacancy
+from apps.vacancies.overtime_views import company_overtime_info
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from apps.workers.availability import summary as availability_summary
 from apps.workers.models import Worker, WorkerDocument
@@ -56,15 +58,17 @@ def serialize_candidate(application, params=None):
     }
 
 
-def serialize_team_member(assignment):
-    """Contato liberado só após a alocação: primeiro nome e telefone."""
+def serialize_team_member(assignment, params=None, now=None):
+    """Contato liberado só após a alocação: primeiro nome e telefone. Inclui a hora extra (US52)."""
     worker = assignment.worker
+    params = params or PlatformParameters.get()
     return {
         "id": assignment.pk,
         "first_name": _first_name(worker),
         "phone": worker.phone,
         "status": assignment.status,
         "status_label": assignment.get_status_display(),
+        **company_overtime_info(assignment, params, now or timezone.now()),
     }
 
 
@@ -129,7 +133,7 @@ class VacancyCandidatesView(CandidateAreaView):
                 "free_cancel_minutes_before": params.free_cancel_minutes_before,
                 "no_show_window_days": params.no_show_window_days,
                 "candidates": candidates,
-                "team": [serialize_team_member(a) for a in team],
+                "team": [serialize_team_member(a, params) for a in team],
             }
         )
 
