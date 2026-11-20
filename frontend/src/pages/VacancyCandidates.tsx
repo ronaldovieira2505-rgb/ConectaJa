@@ -11,6 +11,7 @@ import {
 } from '../api'
 import Avatar from '../components/Avatar'
 import CancelReasonForm from '../components/CancelReasonForm'
+import LevelBadge from '../components/LevelBadge'
 import OvertimeRequestForm from '../components/OvertimeRequestForm'
 import ReportLink from '../components/ReportLink'
 import PortfolioThumbs from '../components/PortfolioThumbs'
@@ -190,7 +191,8 @@ export default function VacancyCandidatesSection({
             )}
             <div className="flex items-center gap-3">
               <Avatar src={c.photo_url} name={c.name} className="size-12" />
-              <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}
+              <strong>{c.name}</strong> {c.verified && <Badge tone="success">Verificado</Badge>}{' '}
+              <LevelBadge code={c.level} label={c.level_label} />
             </div>
             {(c.skills ?? []).length > 0 && (
               <p className="marcadores" aria-label={`Experiência de ${c.name}`}>
@@ -228,7 +230,8 @@ export default function VacancyCandidatesSection({
           <ul>
             {data.team.map((m) => (
               <li key={m.id}>
-                {m.first_name} · {m.phone || 'sem telefone'} <Badge>{m.status_label}</Badge>
+                {m.first_name} · {m.phone || 'sem telefone'} <Badge>{m.status_label}</Badge>{' '}
+                <LevelBadge code={m.level} label={m.level_label} />
                 {m.status === 'CONFIRMADA' &&
                   (cancelling === m.id ? (
                     <CancelReasonForm

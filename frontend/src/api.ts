@@ -142,6 +142,16 @@ export interface WorkerProfile {
   availability?: { days: string[]; periods: string[]; summary: string }
   // Alertas de vagas (US19); a localização de casa nunca vem em claro.
   alerts?: { enabled: boolean; radius_km: number; only_my_schedule: boolean; has_home_location: boolean }
+  // Nível (US65) e o que falta para o próximo.
+  level?: WorkerLevel
+}
+
+export type LevelCode = 'NOVO' | 'BRONZE' | 'PRATA' | 'OURO'
+
+export interface WorkerLevel {
+  code: LevelCode
+  label: string
+  next: { code: LevelCode; label: string; missing: string[]; summary: string } | null
 }
 
 export interface AppNotification {
@@ -204,6 +214,9 @@ export interface Candidate {
   name: string
   photo_url: string | null
   verified: boolean
+  // Selo do nível (US65).
+  level?: LevelCode
+  level_label?: string
   completed_shifts: number
   no_shows_30d?: number
   rating_avg?: number | null
@@ -228,6 +241,8 @@ export interface TeamMember {
   phone: string
   status: string
   status_label: string
+  level?: LevelCode
+  level_label?: string
   // Hora extra (US52): só para quem está em execução.
   can_request_overtime?: boolean
   overtime?: OvertimeRequest | null

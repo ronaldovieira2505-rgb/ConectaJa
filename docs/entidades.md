@@ -49,7 +49,7 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `alerts_enabled`, `alert_radius_km`, `alert_only_my_schedule` | alertas de vaga próxima (US19): ligados, raio (5, 10, 20 ou 50 km) e só nos horários da disponibilidade; usam a localização de casa |
 | `suspended_until` | preenchido por suspensão automática ou manual |
 | `suspension_indefinite` | `true` = suspensão manual por tempo indeterminado (US76); `suspended_until` fica vazio e só a reativação encerra |
-| `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |
+| `level` | `NOVO`, `BRONZE`, `PRATA` ou `OURO` (US65); recalculado a cada turno pago, avaliação, falta e cancelamento tardio, com a mudança em `StateTransition` (`WorkerLevel`) |
 | `skills` | lista de até 7 categorias de vaga em que o prestador tem experiência (US08), sem repetição |
 | `bio` | resumo da experiência, até 500 caracteres, sem e-mail nem telefone (US08) |
 | `availability_days`, `availability_periods` | dias (`SEG` a `DOM`) e faixas (`MANHA` 6h–12h, `TARDE` 12h–18h, `NOITE` 18h–6h) em que o prestador costuma trabalhar (US10); só informativo |

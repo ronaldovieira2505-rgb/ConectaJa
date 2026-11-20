@@ -104,7 +104,12 @@ POSITIVE_ONLY_FIELDS = (
     "cnpj_lookup_timeout_seconds",
     "document_max_size_mb",
     "review_window_days",
+    "level_window_days",
+    "level_bronze_shifts",
+    "level_silver_shifts",
+    "level_gold_shifts",
 )
+LEVEL_RATING_FIELDS = ("level_bronze_rating", "level_silver_rating", "level_gold_rating")
 
 
 def humanize_minutes(minutes):
@@ -140,6 +145,13 @@ class PlatformParametersForm(forms.ModelForm):
             "cnpj_lookup_timeout_seconds",
             "document_max_size_mb",
             "review_window_days",
+            "level_window_days",
+            "level_bronze_shifts",
+            "level_bronze_rating",
+            "level_silver_shifts",
+            "level_silver_rating",
+            "level_gold_shifts",
+            "level_gold_rating",
             "worker_fee_percent",
         )
 
@@ -156,6 +168,14 @@ class PlatformParametersForm(forms.ModelForm):
         for name in POSITIVE_ONLY_FIELDS:
             if cleaned.get(name) == 0:
                 self.add_error(name, "O valor deve ser maior que zero.")
+        for name in LEVEL_RATING_FIELDS:
+            value = cleaned.get(name)
+            if value is not None and not 1 <= value <= 5:
+                self.add_error(name, "A nota deve estar entre 1,0 e 5,0.")
+        # Os níveis precisam ficar em ordem crescente de exigência.
+        shifts = [cleaned.get(f"level_{n}_shifts") for n in ("bronze", "silver", "gold")]
+        if None not in shifts and not shifts[0] < shifts[1] < shifts[2]:
+            self.add_error("level_gold_shifts", "Bronze < Prata < Ouro em turnos pagos.")
         return cleaned
 
 

@@ -42,6 +42,9 @@ def serialize_candidate(application, params=None):
             f"/api/applications/{application.pk}/photo/" if _worker_has_selfie(worker) else None
         ),
         "verified": worker.verification_status == Worker.VerificationStatus.APPROVED,
+        # Selo do nível (US65).
+        "level": worker.level,
+        "level_label": worker.get_level_display(),
         "completed_shifts": worker.assignments.filter(status=Assignment.Status.PAID).count(),
         "no_shows_30d": reviews.worker_no_shows_recent(worker, params=params),
         "rating_avg": rating["average"],
@@ -66,6 +69,8 @@ def serialize_team_member(assignment, params=None, now=None):
         "id": assignment.pk,
         "first_name": _first_name(worker),
         "phone": worker.phone,
+        "level": worker.level,
+        "level_label": worker.get_level_display(),
         "status": assignment.status,
         "status_label": assignment.get_status_display(),
         **company_overtime_info(assignment, params, now or timezone.now()),

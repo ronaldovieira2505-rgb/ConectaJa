@@ -44,6 +44,9 @@ class Worker(models.Model):
 
     class Level(models.TextChoices):
         NEW = "NOVO", "Novo"
+        BRONZE = "BRONZE", "Bronze"
+        SILVER = "PRATA", "Prata"
+        GOLD = "OURO", "Ouro"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="worker"

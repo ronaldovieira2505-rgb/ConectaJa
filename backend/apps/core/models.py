@@ -54,6 +54,22 @@ class PlatformParameters(models.Model):
     review_window_days = models.PositiveIntegerField(
         "prazo para avaliar após a aprovação das horas (dias)", default=7
     )
+    # Níveis do prestador (US65).
+    level_window_days = models.PositiveIntegerField(
+        "janela de faltas e cancelamentos tardios dos níveis (dias)", default=90
+    )
+    level_bronze_shifts = models.PositiveIntegerField("nível Bronze: turnos pagos", default=5)
+    level_bronze_rating = models.DecimalField(
+        "nível Bronze: nota mínima", max_digits=2, decimal_places=1, default=Decimal("4.0")
+    )
+    level_silver_shifts = models.PositiveIntegerField("nível Prata: turnos pagos", default=15)
+    level_silver_rating = models.DecimalField(
+        "nível Prata: nota mínima", max_digits=2, decimal_places=1, default=Decimal("4.5")
+    )
+    level_gold_shifts = models.PositiveIntegerField("nível Ouro: turnos pagos", default=30)
+    level_gold_rating = models.DecimalField(
+        "nível Ouro: nota mínima", max_digits=2, decimal_places=1, default=Decimal("4.7")
+    )
     worker_fee_percent = models.DecimalField(
         "taxa retida do prestador (%)", max_digits=5, decimal_places=2, default=Decimal("3")
     )
