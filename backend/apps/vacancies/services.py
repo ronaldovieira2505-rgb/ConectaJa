@@ -11,6 +11,7 @@ from apps.core.models import PlatformParameters
 from apps.core.notifications import notify, notify_company
 from apps.core.state_machine import record_creation, transition
 from apps.payments import services as payments
+from apps.vacancies import alerts
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies.equipment import equipment_text
 from apps.vacancies.models import Application, Assignment, Vacancy, VacancyChange
@@ -60,9 +61,12 @@ def pay_vacancy(vacancy, *, actor=None, now=None):
         raise DomainError(vacancy.company.suspension_message)
     _check_lead_time(vacancy.starts_at, now, PlatformParameters.get())
     payments.retain(vacancy.custody, actor=actor, now=now)
-    return transition(
+    vacancy = transition(
         vacancy, VACANCY_MACHINE, V.PUBLISHED, actor=actor, reason="Pagamento confirmado", now=now
     )
+    # Alertas de vaga próxima (US19): só depois de confirmado o pagamento e sem desfazê-lo.
+    transaction.on_commit(lambda: alerts.send_safely(vacancy.pk))
+    return vacancy
 
 
 @transaction.atomic

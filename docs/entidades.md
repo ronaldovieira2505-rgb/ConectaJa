@@ -46,6 +46,7 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `verification_status` | `PENDENTE_DOCUMENTOS`, `EM_ANALISE`, `APROVADO`, `REJEITADO` |
 | `pix_key_type` (`CPF`, `EMAIL`, `TELEFONE`, `ALEATORIA`), `pix_key` | sempre mascarada em respostas e logs |
 | `home_latitude`, `home_longitude` | opcional; para ordenar vagas por proximidade |
+| `alerts_enabled`, `alert_radius_km`, `alert_only_my_schedule` | alertas de vaga próxima (US19): ligados, raio (5, 10, 20 ou 50 km) e só nos horários da disponibilidade; usam a localização de casa |
 | `suspended_until` | preenchido por suspensão automática ou manual |
 | `suspension_indefinite` | `true` = suspensão manual por tempo indeterminado (US76); `suspended_until` fica vazio e só a reativação encerra |
 | `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |

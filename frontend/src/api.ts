@@ -140,6 +140,8 @@ export interface WorkerProfile {
   portfolio?: PortfolioPhoto[]
   // Disponibilidade (US10).
   availability?: { days: string[]; periods: string[]; summary: string }
+  // Alertas de vagas (US19); a localização de casa nunca vem em claro.
+  alerts?: { enabled: boolean; radius_km: number; only_my_schedule: boolean; has_home_location: boolean }
 }
 
 export interface AppNotification {

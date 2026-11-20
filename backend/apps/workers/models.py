@@ -96,6 +96,11 @@ class Worker(models.Model):
         blank=True,
         help_text="MANHA (6h–12h), TARDE (12h–18h), NOITE (18h–6h) (US10).",
     )
+    alerts_enabled = models.BooleanField("alertas de vagas ligados", default=False)
+    alert_radius_km = models.PositiveSmallIntegerField("raio dos alertas (km)", default=10)
+    alert_only_my_schedule = models.BooleanField(
+        "alertas só nos meus horários", default=False, help_text="Usa a disponibilidade (US10)."
+    )
     created_at = models.DateTimeField("criado em", auto_now_add=True)
 
     class Meta:

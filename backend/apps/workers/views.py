@@ -18,7 +18,7 @@ from apps.companies.views import digits_only, first_error
 from apps.core.exceptions import DomainError
 from apps.core.masking import mask_phone
 from apps.core.validators import is_valid_cpf
-from apps.workers import availability, portfolio, profile, services, skills
+from apps.workers import alert_settings, availability, portfolio, profile, services, skills
 from apps.workers.models import Worker, WorkerDocument
 
 KINDS = list(WorkerDocument.Kind)
@@ -95,6 +95,7 @@ def serialize_worker(worker):
         "bio": worker.bio,
         "portfolio": portfolio.serialize_photos(worker),
         "availability": availability.serialize(worker),
+        "alerts": alert_settings.serialize(worker),
         "profile_steps": steps,
         "verification_message": "Aguardando verificação" if awaiting else "",
     }
@@ -127,7 +128,7 @@ class WorkerRegisterView(APIView):
 
 
 SKILL_FIELDS = {"skills", "bio"}
-PROFILE_FIELDS = SKILL_FIELDS | set(availability.FIELDS)
+PROFILE_FIELDS = SKILL_FIELDS | set(availability.FIELDS) | alert_settings.FIELDS
 
 
 class WorkerMeView(APIView):
@@ -149,8 +150,8 @@ class WorkerMeView(APIView):
         if set(request.data) - PROFILE_FIELDS:
             return Response(
                 {
-                    "detail": "Aqui só é possível alterar as habilidades, o resumo "
-                    "e a disponibilidade."
+                    "detail": "Aqui só é possível alterar as habilidades, o resumo, "
+                    "a disponibilidade e os alertas."
                 },
                 status=400,
             )
@@ -164,6 +165,7 @@ class WorkerMeView(APIView):
                 if set(changes) & SKILL_FIELDS:
                     skills.update_skills(worker, changes)
                 availability.update_availability(worker, changes)
+                alert_settings.update_alert_settings(worker, changes)
         except DomainError as error:
             return Response({"detail": str(error)}, status=400)
         worker.refresh_from_db()
