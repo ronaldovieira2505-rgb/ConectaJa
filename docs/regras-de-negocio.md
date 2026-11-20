@@ -66,6 +66,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 - Candidatura voluntária com aprovação da empresa. Não há despacho automático.
 - O prestador vê, antes de se candidatar, o **valor líquido** (com os 3% descontados) e o selo "Pagamento garantido" (custódia retida).
 - Não é permitido ter duas alocações com horários sobrepostos.
+- **Convidar de novo (US44):** na vaga publicada, a empresa vê quem já concluiu turno pago com ela (foto, nome no padrão "Ana R.", turnos com a empresa e a nota que ela deu), da maior para a menor nota, e pode convidar. O convite notifica o prestador com link para a vaga, mas **não** pula a candidatura: ele se candidata e a empresa aprova como sempre (decisão do PO). Cada prestador recebe um convite por vaga; no máximo 20 convites por vaga (decisão do PO). Prestador suspenso, já candidato ou com conflito de horário aparece sem o botão e com o motivo; vaga lotada, encerrada ou cancelada não recebe convites.
 
 ## 6. Execução, validação e pagamento
 

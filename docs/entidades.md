@@ -109,6 +109,9 @@ Todos os prazos, limites e taxas de `docs/regras-de-negocio.md`. Editável pelo 
 ### Notification — notificações dentro do app
 `user`, `kind`, `title`, `message`, `link`, `dedup_key` (opcional e único: aviso que só pode sair uma vez, como o lembrete de um turno, US49), `read_at`, `created_at`. Sem e-mail ou push no MVP.
 
+### VacancyInvite — convite para vaga (US44)
+`vacancy`, `worker`, `invited_by`, `created_at`. Único por (`vacancy`, `worker`); até 20 por vaga. Só para prestador com turno pago na empresa. Não cria candidatura.
+
 ### FavoriteVacancy — vaga favorita (US18)
 `worker`, `vacancy`, `created_at`. Única por (`worker`, `vacancy`): favoritar de novo não duplica. Só vagas que já apareceram na busca (`PUBLICADA`, `CANDIDATURAS_ENCERRADAS`, `EM_ANDAMENTO`) podem ser favoritadas; depois de encerrada, cancelada ou lotada, a vaga continua na lista com o selo "Encerrada" ou "Lotada". Cada prestador só vê as próprias favoritas.
 
