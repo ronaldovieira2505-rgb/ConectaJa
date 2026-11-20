@@ -104,7 +104,7 @@ Invariante: `RETENCAO = REPASSE + TAXA + ESTORNO` quando a custódia é encerrad
 Todos os prazos, limites e taxas de `docs/regras-de-negocio.md`. Editável pelo admin (US79). O código **sempre** lê daqui.
 
 ### Notification — notificações dentro do app
-`user`, `kind`, `title`, `message`, `link`, `read_at`, `created_at`. Sem e-mail ou push no MVP.
+`user`, `kind`, `title`, `message`, `link`, `dedup_key` (opcional e único: aviso que só pode sair uma vez, como o lembrete de um turno, US49), `read_at`, `created_at`. Sem e-mail ou push no MVP.
 
 ### Review — avaliação bilateral [pós-MVP: US63/US64]
 `assignment`, `direction` (`EMPRESA_PARA_PRESTADOR` (US63) e `PRESTADOR_PARA_EMPRESA` (US64)), `author` (usuário), `rating` (1 a 5), `comment` (opcional, até 500 caracteres), `created_at`. Única por (`assignment`, `direction`). Definitiva: não há edição nem exclusão. Não obrigatória; conta para o status [pós-MVP].

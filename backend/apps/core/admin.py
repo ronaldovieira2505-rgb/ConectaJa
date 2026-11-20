@@ -82,6 +82,7 @@ MINUTE_FIELDS = (
     "min_publish_lead_minutes",
     "payment_deadline_minutes",
     "applications_close_minutes_before",
+    "shift_reminder_minutes_before",
     "checkin_open_minutes_before",
     "no_show_tolerance_minutes",
     "auto_checkout_minutes_after_end",
@@ -91,6 +92,7 @@ MINUTE_FIELDS = (
 # Parâmetros que não fazem sentido com zero; os demais aceitam 0.
 POSITIVE_ONLY_FIELDS = (
     "payment_deadline_minutes",
+    "shift_reminder_minutes_before",
     "geofence_radius_m",
     "contest_window_minutes",
     "no_show_limit",

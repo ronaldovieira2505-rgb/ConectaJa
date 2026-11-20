@@ -17,6 +17,9 @@ class PlatformParameters(models.Model):
     applications_close_minutes_before = models.PositiveIntegerField(
         "encerramento de candidaturas (min antes do início)", default=120
     )
+    shift_reminder_minutes_before = models.PositiveIntegerField(
+        "lembrete do turno ao prestador (min antes do início)", default=1440
+    )
     checkin_open_minutes_before = models.PositiveIntegerField(
         "antecedência do check-in (min)", default=30
     )
@@ -178,6 +181,16 @@ class Notification(models.Model):
     title = models.CharField("título", max_length=120)
     message = models.TextField("mensagem", blank=True)
     link = models.CharField("link", max_length=200, blank=True)
+    dedup_key = models.CharField(
+        "chave de idempotência",
+        max_length=80,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text=(
+            "Avisos que só podem sair uma vez (ex.: lembrete de um turno). Vazio = sem regra."
+        ),
+    )
     read_at = models.DateTimeField("lida em", null=True, blank=True)
     created_at = models.DateTimeField("criada em", default=timezone.now)
 
