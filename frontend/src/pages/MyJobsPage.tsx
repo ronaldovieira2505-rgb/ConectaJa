@@ -10,6 +10,7 @@ import {
   type JobItem,
   type MyJobs,
 } from '../api'
+import JobsTabs from '../components/JobsTabs'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
 
@@ -280,6 +281,7 @@ export default function MyJobsPage() {
   return (
     <>
       <h1>Meus trabalhos</h1>
+      <JobsTabs />
       {actionError && <Alert tone="error">{actionError}</Alert>}
       {GROUPS.every((group) => jobs.groups[group.key].length === 0) && (
         <Card>

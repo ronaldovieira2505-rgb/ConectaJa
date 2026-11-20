@@ -10,6 +10,7 @@ import CompanySignupPage from './pages/CompanySignupPage'
 import CompanyVacanciesPage from './pages/CompanyVacanciesPage'
 import CompanyVacancyDetailPage from './pages/CompanyVacancyDetailPage'
 import CompanyVacancyNewPage from './pages/CompanyVacancyNewPage'
+import FavoritesPage from './pages/FavoritesPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import MyJobsPage from './pages/MyJobsPage'
@@ -61,6 +62,7 @@ export default function AppRoutes() {
         <Route element={<RequireRole role="WORKER" />}>
           <Route path="prestador/vagas" element={<Navigate to="/vagas" replace />} />
           <Route path="meus-trabalhos" element={<MyJobsPage />} />
+          <Route path="meus-trabalhos/favoritas" element={<FavoritesPage />} />
           <Route path="carteira" element={<WorkerWalletPage />} />
           <Route path="prestador/perfil" element={<WorkerHomePage />} />
           <Route path="perfil/documentos" element={<WorkerDocumentsPage />} />

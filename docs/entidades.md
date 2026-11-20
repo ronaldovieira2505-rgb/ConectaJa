@@ -106,5 +106,8 @@ Todos os prazos, limites e taxas de `docs/regras-de-negocio.md`. Editável pelo 
 ### Notification — notificações dentro do app
 `user`, `kind`, `title`, `message`, `link`, `read_at`, `created_at`. Sem e-mail ou push no MVP.
 
+### FavoriteVacancy — vaga favorita (US18)
+`worker`, `vacancy`, `created_at`. Única por (`worker`, `vacancy`): favoritar de novo não duplica. Só vagas que já apareceram na busca (`PUBLICADA`, `CANDIDATURAS_ENCERRADAS`, `EM_ANDAMENTO`) podem ser favoritadas; depois de encerrada, cancelada ou lotada, a vaga continua na lista com o selo "Encerrada" ou "Lotada". Cada prestador só vê as próprias favoritas.
+
 ### Review — avaliação bilateral [pós-MVP: US63/US64]
 `assignment`, `direction` (`EMPRESA_PARA_PRESTADOR` (US63) e `PRESTADOR_PARA_EMPRESA` (US64)), `author` (usuário), `rating` (1 a 5), `comment` (opcional, até 500 caracteres), `created_at`. Única por (`assignment`, `direction`). Definitiva: não há edição nem exclusão. Não obrigatória; conta para o status [pós-MVP].
