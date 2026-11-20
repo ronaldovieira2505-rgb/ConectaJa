@@ -1,13 +1,17 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import AuthProvider from '../AuthProvider'
 import AppRoutes from '../routes'
 
-function mockApi(wallet: unknown) {
+const STATEMENT = '/api/workers/me/statement.csv'
+
+function mockApi(wallet: unknown, statement?: () => unknown) {
   vi.stubGlobal(
     'fetch',
     vi.fn((path: string) => {
+      if (statement && path.startsWith(`${STATEMENT}?`)) return Promise.resolve(statement())
       const bodies: Record<string, unknown> = {
         '/api/auth/me/': {
           id: 1,
@@ -111,5 +115,61 @@ describe('Carteira do prestador (US60)', () => {
 
     expect(await screen.findByText('Nenhum valor a receber por enquanto.')).toBeInTheDocument()
     expect(screen.getByText('Nenhum valor liberado ainda.')).toBeInTheDocument()
+  })
+})
+
+const EMPTY_WALLET = {
+  totals: { receivable_cents: 0, released_cents: 0, fees_cents: 0 },
+  fee_percent: 3,
+  receivable: [],
+  released: [],
+}
+
+describe('Extrato do prestador (US61)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('baixa o CSV do período escolhido com o nome enviado pelo servidor', async () => {
+    mockApi(EMPTY_WALLET, () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers({
+        'Content-Disposition': 'attachment; filename="extrato-conecta-ja-2026-10.csv"',
+      }),
+      blob: () => Promise.resolve(new Blob(['﻿cabeçalho'])),
+    }))
+    Object.defineProperty(URL, 'createObjectURL', { value: () => 'blob:extrato', configurable: true })
+    Object.defineProperty(URL, 'revokeObjectURL', { value: () => undefined, configurable: true })
+    let downloaded = ''
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded = this.download
+    })
+    renderWallet()
+    const user = userEvent.setup()
+
+    await user.selectOptions(await screen.findByLabelText('Período'), 'Mês anterior')
+    await user.click(screen.getByRole('button', { name: 'Baixar extrato' }))
+
+    const calls = vi.mocked(fetch).mock.calls.map(([path]) => String(path))
+    const request = calls.find((path) => path.startsWith(STATEMENT))
+    expect(request).toMatch(/\?from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-\d{2}$/)
+    expect(downloaded).toBe('extrato-conecta-ja-2026-10.csv')
+  })
+
+  it('mostra o erro do servidor quando o período é recusado', async () => {
+    mockApi(EMPTY_WALLET, () => ({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ detail: 'O período pode ter no máximo 366 dias.' }),
+    }))
+    renderWallet()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Baixar extrato' }))
+
+    expect(await screen.findByText('O período pode ter no máximo 366 dias.')).toBeInTheDocument()
   })
 })
