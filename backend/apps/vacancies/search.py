@@ -9,6 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from apps.accounts.models import Role
+from apps.companies.public import company_summary
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.vacancies.application_services import has_overlap
@@ -219,6 +220,7 @@ def serialize_detail(vacancy, user, now=None):
             "latitude": str(vacancy.latitude),
             "longitude": str(vacancy.longitude),
             "rules": serialize_rules(params),
+            "company": company_summary(vacancy.company, now),
             "apply_blocker": apply_blocker(user, now, vacancy),
             "my_application": (
                 {"id": mine.pk, "status": mine.status, "status_label": mine.get_status_display()}
