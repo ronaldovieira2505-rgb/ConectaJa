@@ -110,6 +110,18 @@ Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pe
 
 ---
 
+## Denúncia (`Report`)
+
+| De | Evento / ator | Para | Condições e efeitos |
+|---|---|---|---|
+| — | Prestador denuncia vaga ou empresa (US69) | `ABERTA` | Motivo da lista, descrição de 10 a 1.000 caracteres, sem outra denúncia aberta da mesma pessoa sobre o mesmo alvo. Notifica os admins; o denunciado **não** é avisado |
+| `ABERTA` | Admin marca "Em análise" (US74) | `EM_ANALISE` | — |
+| `ABERTA`, `EM_ANALISE` | Admin conclui (US74) | `PROCEDENTE` ou `IMPROCEDENTE` | Parecer obrigatório |
+
+Estados finais: `PROCEDENTE`, `IMPROCEDENTE`. Cada transição grava um `StateTransition` (`entity_type = "Report"`).
+
+---
+
 ## 5. Verificação de cadastro (triagem)
 
 **Empresa:** `PENDENTE` → `APROVADA` | `REJEITADA` (admin, motivo obrigatório) · `REJEITADA` → `PENDENTE` (empresa corrige os dados).

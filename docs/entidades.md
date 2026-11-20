@@ -99,6 +99,11 @@ proporcional ao valor por hora do turno), `status` (`AGUARDANDO_PRESTADOR`, `ACE
 `requested_by`, `created_at`, `expires_at` e `responded_at`. Restrições: um pendente e no máximo um aceito por
 alocação. As transições ficam em `StateTransition` (`entity_type = "OvertimeRequest"`).
 
+## Confiança e segurança
+
+### Report — denúncia (US69)
+App `reports`. Campos: `reporter` (usuário que denunciou), `target_type` (`VAGA` ou `EMPRESA`), `company` (empresa denunciada: o alvo, ou a dona da vaga denunciada), `vacancy` (só quando o alvo é uma vaga), `reason` (`VAGA_FALSA`, `PAGAMENTO_POR_FORA`, `CONDICOES_DIFERENTES`, `COMPORTAMENTO`, `OUTRO`), `description` (10 a 1.000 caracteres), `status` (`ABERTA`, `EM_ANALISE`, `PROCEDENTE`, `IMPROCEDENTE`), `created_at`, `decided_at`, `decided_by` e `decision` (parecer do admin). Restrição: uma denúncia aberta (`ABERTA` ou `EM_ANALISE`) por pessoa e por alvo. A empresa denunciada nunca vê a denúncia nem quem denunciou.
+
 ## Dinheiro (simulado no MVP, mesmo desenho do PSP real)
 
 ### Custody — Custódia da vaga

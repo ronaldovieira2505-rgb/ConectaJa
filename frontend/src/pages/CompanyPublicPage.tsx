@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, type CompanyPublicProfile } from '../api'
 import CompanyAbout from '../components/CompanyAbout'
+import ReportLink from '../components/ReportLink'
 import { Alert, Card, Loading } from '../components/ui'
 import VacancyTile from '../components/VacancyTile'
 
@@ -31,6 +32,14 @@ export default function CompanyPublicPage() {
           <Link to="/vagas">Voltar para a busca</Link>
         </p>
         <CompanyAbout company={company} heading="h1" />
+        <p className="mt-4">
+          <ReportLink
+            targetType="EMPRESA"
+            targetId={company.id}
+            role="WORKER"
+            ariaLabel="Denunciar esta empresa"
+          />
+        </p>
       </Card>
 
       <section aria-labelledby="empresa-vagas">
