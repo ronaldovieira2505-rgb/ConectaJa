@@ -1,3 +1,5 @@
+import type { EquipmentEntry } from './equipment'
+
 export class ApiError extends Error {
   status: number
 
@@ -164,6 +166,9 @@ export interface Vacancy {
   city: string
   state: string
   zip_code?: string
+  // EPIs, uniforme e ferramentas (US22).
+  equipment?: EquipmentEntry[]
+  equipment_notes?: string
   latitude: string
   longitude: string
   starts_at: string
@@ -354,6 +359,8 @@ export interface CompanyPublicProfile extends CompanySummary {
 
 export interface VacancyPublicDetail extends VacancyCard {
   company?: CompanySummary
+  // O que levar e o que a empresa fornece (US22).
+  equipment?: { bring: string[]; provided: string[]; notes: string }
   rules: VacancyRules
   description: string
   street: string

@@ -15,6 +15,7 @@ import CompanyAbout from '../components/CompanyAbout'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
 import FavoriteButton from '../components/FavoriteButton'
+import EquipmentLists from '../components/EquipmentLists'
 
 /** Detalhe da vaga para o prestador: o essencial à vista e o restante em "ver mais" (US17). */
 export default function VacancyPublicDetailPage() {
@@ -138,6 +139,13 @@ export default function VacancyPublicDetailPage() {
       )}
       {applyError && <Alert tone="error">{applyError}</Alert>}
       {vacancy.apply_blocker && !applyError && !sent && <Alert>{vacancy.apply_blocker}</Alert>}
+      {vacancy.equipment && (
+        <EquipmentLists
+          bring={vacancy.equipment.bring}
+          provided={vacancy.equipment.provided}
+          notes={vacancy.equipment.notes}
+        />
+      )}
       {vacancy.company && (
         <section aria-labelledby="sobre-a-empresa" className="mt-6 border-t border-regua pt-6">
           <h2 id="sobre-a-empresa">Sobre a empresa</h2>

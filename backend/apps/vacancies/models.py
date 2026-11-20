@@ -62,6 +62,13 @@ class Vacancy(models.Model):
     photo = models.FileField(
         "foto do local", upload_to="vacancy_photos/", storage=private_storage, blank=True
     )
+    equipment = models.JSONField(
+        "EPIs, uniforme e ferramentas",
+        default=list,
+        blank=True,
+        help_text='Itens da lista fixa com quem providencia: [{"item", "provider"}] (US22).',
+    )
+    equipment_notes = models.CharField("observações sobre o que levar", max_length=300, blank=True)
     created_at = models.DateTimeField("criada em", default=timezone.now)
 
     class Meta:

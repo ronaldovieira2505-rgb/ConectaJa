@@ -3,8 +3,11 @@ import { Link, useParams } from 'react-router-dom'
 import { api, ApiError, brl, formatShift, type Vacancy } from '../api'
 import { CATEGORIES } from '../categories'
 import CancelReasonForm from '../components/CancelReasonForm'
+import EquipmentFields from '../components/EquipmentFields'
+import EquipmentLists from '../components/EquipmentLists'
 import { Alert, Badge, Button, Card, Field, Loading, SelectField, Slots } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
+import { equipmentLabel, type EquipmentEntry } from '../equipment'
 import { badgeToneFor, toneFor } from '../status'
 import PendingAssignmentsSection from './PendingAssignments'
 import VacancyCandidatesSection from './VacancyCandidates'
@@ -47,6 +50,8 @@ export default function CompanyVacancyDetailPage() {
     starts_at: '',
     ends_at: '',
   })
+  const [equipment, setEquipment] = useState<EquipmentEntry[]>([])
+  const [equipmentNotes, setEquipmentNotes] = useState('')
 
   useEffect(() => {
     api<Vacancy>(`/api/vacancies/${id}/`)
@@ -117,6 +122,8 @@ export default function CompanyVacancyDetailPage() {
       starts_at: toLocalInput(v.starts_at),
       ends_at: toLocalInput(v.ends_at),
     })
+    setEquipment(v.equipment ?? [])
+    setEquipmentNotes(v.equipment_notes ?? '')
     setError('')
     setSaved(false)
     setConfirmingRemove(false)
@@ -134,6 +141,8 @@ export default function CompanyVacancyDetailPage() {
             ...form,
             starts_at: new Date(form.starts_at).toISOString(),
             ends_at: new Date(form.ends_at).toISOString(),
+            equipment,
+            equipment_notes: equipmentNotes,
           },
         }),
       )
@@ -202,6 +211,12 @@ export default function CompanyVacancyDetailPage() {
           <Field label="Longitude" value={form.longitude} onChange={set('longitude')} />
           <Field label="Início" type="datetime-local" value={form.starts_at} onChange={set('starts_at')} />
           <Field label="Fim" type="datetime-local" value={form.ends_at} onChange={set('ends_at')} />
+          <EquipmentFields
+            value={equipment}
+            notes={equipmentNotes}
+            onChange={setEquipment}
+            onNotesChange={setEquipmentNotes}
+          />
           <Field label="Valor por pessoa" value={brl(vacancy.pay_per_person_cents)} readOnly />
           <Field label="Número de pessoas" value={String(vacancy.positions)} readOnly />
           <p>{READ_ONLY_HINT}</p>
@@ -289,6 +304,15 @@ export default function CompanyVacancyDetailPage() {
                 </p>
               </>
             )}
+            <EquipmentLists
+              bring={(vacancy.equipment ?? [])
+                .filter((e) => e.provider === 'PRESTADOR')
+                .map((e) => equipmentLabel(e.item))}
+              provided={(vacancy.equipment ?? [])
+                .filter((e) => e.provider === 'EMPRESA')
+                .map((e) => equipmentLabel(e.item))}
+              notes={vacancy.equipment_notes ?? ''}
+            />
           </details>
           {['PUBLICADA', 'CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
             <VacancyCandidatesSection vacancyId={vacancy.id} onChange={refreshVacancy} />
