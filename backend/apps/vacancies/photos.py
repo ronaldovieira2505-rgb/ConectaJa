@@ -2,11 +2,20 @@
 
 import uuid
 
+from django.core.files.base import ContentFile
+
 from apps.core.exceptions import DomainError
 from apps.core.images import content_type_of, validate_image, version_of
 from apps.vacancies.models import Vacancy
 
-__all__ = ["PhotoLockedError", "content_type_of", "photo_url", "remove_photo", "set_photo"]
+__all__ = [
+    "PhotoLockedError",
+    "content_type_of",
+    "copy_photo",
+    "photo_url",
+    "remove_photo",
+    "set_photo",
+]
 
 LOCKED_STATUSES = (Vacancy.Status.FINISHED, Vacancy.Status.CANCELLED)
 LOCKED = "Não é possível alterar a foto de uma vaga encerrada."
@@ -35,6 +44,26 @@ def remove_photo(vacancy):
     if vacancy.photo:
         vacancy.photo.delete(save=True)
     return vacancy
+
+
+def copy_photo(source, target):
+    """Vaga duplicada (US25): copia o arquivo da foto, para cada vaga ter o seu.
+
+    Sem foto na original (ou arquivo sumido do disco), a vaga nova fica sem foto.
+    Devolve se copiou.
+    """
+    if not source.photo:
+        return False
+    try:
+        with source.photo.open("rb") as handle:
+            content = handle.read()
+    except FileNotFoundError:
+        return False
+    extension = source.photo.name.rsplit(".", 1)[-1].lower()
+    target.photo.save(
+        f"{target.pk}-{uuid.uuid4().hex[:12]}.{extension}", ContentFile(content), save=True
+    )
+    return True
 
 
 def photo_url(vacancy):
