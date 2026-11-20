@@ -69,6 +69,11 @@ class Worker(models.Model):
         "longitude residencial", max_digits=9, decimal_places=6, null=True, blank=True
     )
     suspended_until = models.DateTimeField("suspenso até", null=True, blank=True)
+    suspension_indefinite = models.BooleanField(
+        "suspensão por tempo indeterminado",
+        default=False,
+        help_text="Suspensão manual do admin sem data de fim; só termina com a reativação.",
+    )
     level = models.CharField("nível", max_length=10, choices=Level.choices, default=Level.NEW)
     created_at = models.DateTimeField("criado em", auto_now_add=True)
 
@@ -89,10 +94,14 @@ class Worker(models.Model):
         return mask_pix_key(self.pix_key_type, self.pix_key)
 
     def is_suspended(self, now):
+        if self.suspension_indefinite:
+            return True
         return self.suspended_until is not None and self.suspended_until > now
 
     @property
     def suspension_message(self):
+        if self.suspension_indefinite:
+            return "Sua conta está suspensa por tempo indeterminado."
         until = self.suspended_until.astimezone(ZoneInfo("America/Sao_Paulo"))
         return f"Sua conta está suspensa até {until.strftime('%d/%m/%Y')}."
 

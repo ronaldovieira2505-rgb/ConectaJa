@@ -33,6 +33,8 @@ Login por **e-mail + senha** (e-mail único, case-insensitive). Campo `role`: `C
 | `preferred_payment_method` | `PIX`, `BOLETO` ou `CARTAO` — **só a preferência**; nunca armazenar dados de cartão ou conta (no futuro o PSP tokeniza) |
 | `verification_status` | `PENDENTE`, `APROVADA`, `REJEITADA` (ver `VerificationReview`) |
 | `description` | descrição da empresa exibida ao prestador [pós-MVP: US15] |
+| `suspended_until` | fim da suspensão manual do admin (US76); vazio = sem suspensão com data |
+| `suspension_indefinite` | `true` = suspensa por tempo indeterminado (sem data de fim); só a reativação encerra |
 
 ### CompanyMember
 Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: US03]. Nunca compartilhar login.
@@ -45,6 +47,7 @@ Vínculo `User` ↔ `Company` com `role`: `OWNER` (MVP) ou `MANAGER` [pós-MVP: 
 | `pix_key_type` (`CPF`, `EMAIL`, `TELEFONE`, `ALEATORIA`), `pix_key` | sempre mascarada em respostas e logs |
 | `home_latitude`, `home_longitude` | opcional; para ordenar vagas por proximidade |
 | `suspended_until` | preenchido por suspensão automática ou manual |
+| `suspension_indefinite` | `true` = suspensão manual por tempo indeterminado (US76); `suspended_until` fica vazio e só a reativação encerra |
 | `level` | `NOVO` (MVP); níveis [pós-MVP: US65] |
 | `skills`, `availability`, portfólio | [pós-MVP: US08–US10] |
 

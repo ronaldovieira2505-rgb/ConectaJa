@@ -34,6 +34,8 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 
 **Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
 
+**Suspensão manual de conta (US76):** só o admin suspende ou reativa, sempre com motivo. A suspensão tem de 1 a 365 dias ou é por tempo indeterminado. Empresa suspensa não cria nem paga vagas novas (vê "Conta suspensa até ..."), mas as vagas já publicadas continuam valendo. Prestador suspenso não se candidata nem é aprovado, e mantém as alocações já confirmadas. Banimento definitivo e recurso do usuário ficam fora do escopo.
+
 ## 3. Cadastro e triagem
 
 - **Login:** e-mail + senha para empresa e prestador. O admin usa o painel administrativo.

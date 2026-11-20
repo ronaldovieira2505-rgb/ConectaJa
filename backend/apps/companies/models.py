@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 from django.conf import settings
 from django.db import models
 
@@ -54,6 +56,12 @@ class Company(models.Model):
     logo = models.FileField(
         "logo", upload_to="company_logos/", storage=private_storage, blank=True
     )
+    suspended_until = models.DateTimeField("suspensa até", null=True, blank=True)
+    suspension_indefinite = models.BooleanField(
+        "suspensão por tempo indeterminado",
+        default=False,
+        help_text="Suspensão manual do admin sem data de fim; só termina com a reativação.",
+    )
     created_at = models.DateTimeField("criada em", auto_now_add=True)
 
     class Meta:
@@ -62,6 +70,18 @@ class Company(models.Model):
 
     def __str__(self):
         return self.trade_name or self.legal_name
+
+    def is_suspended(self, now):
+        if self.suspension_indefinite:
+            return True
+        return self.suspended_until is not None and self.suspended_until > now
+
+    @property
+    def suspension_message(self):
+        if self.suspension_indefinite:
+            return "Conta suspensa por tempo indeterminado."
+        until = self.suspended_until.astimezone(ZoneInfo("America/Sao_Paulo"))
+        return f"Conta suspensa até {until.strftime('%d/%m/%Y')}."
 
 
 class CompanyMember(models.Model):

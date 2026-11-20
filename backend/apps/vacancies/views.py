@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.db.models import Count, Q
 from django.http import FileResponse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework import serializers
@@ -142,6 +143,8 @@ def forbidden_company(company):
         return Response({"detail": PENDING_COMPANY}, status=403)
     if company.verification_status != Company.VerificationStatus.APPROVED:
         return Response({"detail": REJECTED_COMPANY}, status=403)
+    if company.is_suspended(timezone.now()):
+        return Response({"detail": company.suspension_message}, status=403)
     return None
 
 
