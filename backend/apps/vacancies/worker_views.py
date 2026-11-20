@@ -13,7 +13,7 @@ from apps.core.exceptions import DomainError, InvalidTransition
 from apps.core.models import PlatformParameters
 from apps.core.permissions import IsWorkerUser
 from apps.vacancies import application_services as applications
-from apps.vacancies import arrival, favorites
+from apps.vacancies import arrival, favorites, overtime
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import review_services as reviews
 from apps.vacancies import waitlist_services as waitlist
@@ -78,6 +78,7 @@ def _execution_info(assignment, params, now):
         and assignment.contest_response_at.isoformat(),
         **_review_info(assignment, params, now),
         **_arrival_info(assignment, params, now),
+        **_overtime_info(assignment, params, now),
     }
 
 
@@ -111,6 +112,16 @@ def _arrival_info(assignment, params, now):
         and arrival.can_justify(assignment, now=now, params=params),
         "arrival_justification": serialize_justification(justification),
         "check_in_confirmed_by_company": assignment.check_in_confirmed_by_company,
+    }
+
+
+def _overtime_info(assignment, params, now):
+    """Pedido de hora extra (US53): botões "Aceitar"/"Recusar" e o novo fim do turno."""
+    request = overtime.current_request(assignment)
+    return {
+        "overtime": overtime.serialize(request, params),
+        "can_respond_overtime": overtime.can_respond(request, now=now),
+        "extended_until": assignment.extended_until and assignment.extended_until.isoformat(),
     }
 
 
@@ -225,7 +236,7 @@ class WorkerJobsView(WorkerAreaView):
             groups[key].append(serialize_application(application, params))
         for assignment in worker.assignments.select_related(
             "vacancy__company", "arrival_justification"
-        ):
+        ).prefetch_related("overtime_requests"):
             if assignment.status == AS.CONFIRMED:
                 key = "upcoming"
             elif assignment.status in IN_PROGRESS_STATUSES:

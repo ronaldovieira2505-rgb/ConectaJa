@@ -1,33 +1,14 @@
-"""API da hora extra (US52): a empresa pede que o prestador fique mais tempo."""
+"""API da hora extra: a empresa pede (US52) e o prestador aceita ou recusa (US53)."""
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 from rest_framework.response import Response
 
 from apps.core.exceptions import DomainError
-from apps.core.models import PlatformParameters
 from apps.vacancies import overtime
-from apps.vacancies.models import Assignment
+from apps.vacancies.models import Assignment, OvertimeRequest
 from apps.vacancies.views import CompanyAreaView, forbidden_company
-
-
-def serialize_overtime(request, params=None):
-    if request is None:
-        return None
-    params = params or PlatformParameters.get()
-    return {
-        "id": request.pk,
-        "assignment_id": request.assignment_id,
-        "minutes": request.minutes,
-        "minutes_label": overtime.minutes_label(request.minutes),
-        "amount_cents": request.amount_cents,
-        "net_cents": params.worker_net_cents(request.amount_cents),
-        "status": request.status,
-        "status_label": request.get_status_display(),
-        "created_at": request.created_at.isoformat(),
-        "expires_at": request.expires_at.isoformat(),
-        "responded_at": request.responded_at and request.responded_at.isoformat(),
-    }
+from apps.vacancies.worker_views import WorkerAreaView
 
 
 def company_overtime_info(assignment, params, now):
@@ -37,7 +18,7 @@ def company_overtime_info(assignment, params, now):
     allowed = overtime.can_request(assignment, now=now)
     return {
         "can_request_overtime": allowed,
-        "overtime": serialize_overtime(overtime.current_request(assignment), params),
+        "overtime": overtime.serialize(overtime.current_request(assignment), params),
         "overtime_options": overtime.options(assignment.vacancy) if allowed else [],
     }
 
@@ -73,4 +54,37 @@ class OvertimeRequestView(CompanyAreaView):
             )
         except DomainError as error:
             return Response({"detail": str(error)}, status=409)
-        return Response(serialize_overtime(created), status=201)
+        return Response(overtime.serialize(created), status=201)
+
+
+class OvertimeResponseView(WorkerAreaView):
+    """Base de `POST /api/overtime/<id>/accept/` e `/decline/` (US53).
+
+    Só o prestador da alocação responde (outro: 404). Pedido expirado ou já respondido,
+    turno fora de execução ou falha do PSP: 409.
+    """
+
+    respond = None
+
+    def post(self, request, pk):
+        worker = self.worker(request)
+        found = None
+        if worker:
+            found = OvertimeRequest.objects.filter(pk=pk, assignment__worker=worker).first()
+        if found is None:
+            return Response({"detail": "Pedido de hora extra não encontrado."}, status=404)
+        try:
+            result = type(self).respond(found, actor=request.user)
+        except DomainError as error:
+            return Response({"detail": str(error)}, status=409)
+        return Response(overtime.serialize(result))
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class OvertimeAcceptView(OvertimeResponseView):
+    respond = staticmethod(overtime.accept)
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class OvertimeDeclineView(OvertimeResponseView):
+    respond = staticmethod(overtime.decline)

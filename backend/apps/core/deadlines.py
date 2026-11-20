@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.core.exceptions import DomainError
@@ -110,9 +111,12 @@ def process_deadlines(now=None):
     )
 
     # 8. Check-out automático.
-    overdue = Assignment.objects.filter(
+    # O fim é o da vaga ou o estendido pela hora extra aceita (US53).
+    overdue = Assignment.objects.annotate(
+        effective_end=Coalesce("extended_until", "vacancy__ends_at")
+    ).filter(
         status=S.IN_PROGRESS,
-        vacancy__ends_at__lt=now - timedelta(minutes=p.auto_checkout_minutes_after_end),
+        effective_end__lt=now - timedelta(minutes=p.auto_checkout_minutes_after_end),
     )
     _apply(done, "checkouts_automaticos", overdue, lambda a: assignments.auto_check_out(a, now=now))
 

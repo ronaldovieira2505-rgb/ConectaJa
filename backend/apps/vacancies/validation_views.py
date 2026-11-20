@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
-from apps.vacancies import arrival
+from apps.vacancies import arrival, overtime
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import review_services as reviews
 from apps.vacancies.models import ArrivalJustification, Assignment, Review
@@ -32,18 +32,20 @@ def serialize_pending_assignment(assignment, params, now):
     vacancy = assignment.vacancy
     auto_approve_at = assignment.check_out_at + timedelta(minutes=params.contest_window_minutes)
     remaining = max(0, int((auto_approve_at - now).total_seconds()))
+    extension = overtime.accepted_request(assignment)
     return {
         "id": assignment.pk,
         "vacancy_id": vacancy.pk,
         "vacancy_title": vacancy.title,
         "worker_first_name": _first_name(assignment.worker),
         "starts_at": vacancy.starts_at.isoformat(),
-        "ends_at": vacancy.ends_at.isoformat(),
+        "ends_at": (assignment.extended_until or vacancy.ends_at).isoformat(),
+        "overtime_minutes": extension.minutes if extension else 0,
         "check_in_at": assignment.check_in_at and assignment.check_in_at.isoformat(),
         "check_out_at": assignment.check_out_at.isoformat(),
         "check_out_auto": assignment.check_out_auto,
         "check_in_distance_m": assignment.check_in_distance_m,
-        "gross_cents": vacancy.pay_per_person_cents,
+        "gross_cents": vacancy.pay_per_person_cents + (extension.amount_cents if extension else 0),
         "status": assignment.status,
         "status_label": assignment.get_status_display(),
         "auto_approve_at": auto_approve_at.isoformat(),
@@ -110,7 +112,7 @@ class CompanyPendingAssignmentsView(CompanyAreaView):
             owned = owned.filter(vacancy_id=int(vacancy_id))
         queryset = owned.filter(
             status=Assignment.Status.AWAITING_VALIDATION, check_out_at__isnull=False
-        )
+        ).prefetch_related("overtime_requests")
         contested = owned.filter(status=Assignment.Status.CONTESTED)
         justifications = ArrivalJustification.objects.filter(
             assignment__in=owned,

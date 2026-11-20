@@ -1,8 +1,9 @@
-"""Hora extra (US52): a empresa pede que o prestador fique mais tempo, antes do fim do turno.
+"""Hora extra (US52/US53): a empresa pede que o prestador fique mais tempo, antes do fim do turno.
 
 O pedido nasce `AGUARDANDO_PRESTADOR` e expira sozinho se o prestador não responder em
-`overtime_response_minutes` ou até o fim do turno (o que vier primeiro). Neste passo nada é
-cobrado: a extensão só é paga em custódia quando o prestador aceita (US53).
+`overtime_response_minutes` ou até o fim do turno (o que vier primeiro). Nada é cobrado no
+pedido: a extensão só é paga em custódia quando o prestador aceita (US53). Recusar não tem
+penalidade.
 """
 
 from datetime import timedelta
@@ -15,9 +16,11 @@ from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
 from apps.core.notifications import notify, notify_company
 from apps.core.state_machine import record_creation, transition
+from apps.payments import services as payments
 from apps.vacancies.history import format_brl
 from apps.vacancies.models import Assignment, OvertimeRequest
 from apps.vacancies.state_machine import OVERTIME_MACHINE
+from integrations.payments import PaymentGatewayError
 
 OT = OvertimeRequest.Status
 S = Assignment.Status
@@ -61,8 +64,44 @@ def options(vacancy):
 
 
 def current_request(assignment):
-    """O pedido mais recente da alocação (ou `None`)."""
-    return assignment.overtime_requests.order_by("-created_at", "-pk").first()
+    """O pedido mais recente da alocação (ou `None`). Aproveita `prefetch_related`."""
+    requests = list(assignment.overtime_requests.all())
+    return max(requests, key=lambda r: (r.created_at, r.pk)) if requests else None
+
+
+def accepted_request(assignment):
+    return next(
+        (r for r in assignment.overtime_requests.all() if r.status == OT.ACCEPTED), None
+    )
+
+
+def serialize(request, params=None):
+    if request is None:
+        return None
+    params = params or PlatformParameters.get()
+    return {
+        "id": request.pk,
+        "assignment_id": request.assignment_id,
+        "minutes": request.minutes,
+        "minutes_label": minutes_label(request.minutes),
+        "amount_cents": request.amount_cents,
+        "net_cents": params.worker_net_cents(request.amount_cents),
+        "status": request.status,
+        "status_label": request.get_status_display(),
+        "created_at": request.created_at.isoformat(),
+        "expires_at": request.expires_at.isoformat(),
+        "responded_at": request.responded_at and request.responded_at.isoformat(),
+    }
+
+
+def can_respond(request, now=None):
+    """Botões "Aceitar"/"Recusar": pendente, dentro do prazo e com o turno em execução."""
+    return (
+        request is not None
+        and request.status == OT.AWAITING
+        and (now or timezone.now()) < request.expires_at
+        and request.assignment.status == S.IN_PROGRESS
+    )
 
 
 def can_request(assignment, now=None):
@@ -160,3 +199,106 @@ def overdue(now):
     return OvertimeRequest.objects.filter(status=OT.AWAITING, expires_at__lte=now).select_related(
         "assignment__vacancy__company"
     )
+
+
+def _lock_pending(request, now, *, needs_running_shift):
+    request = (
+        OvertimeRequest.objects.select_for_update()
+        .select_related("assignment__vacancy__company", "assignment__worker__user")
+        .get(pk=request.pk)
+    )
+    if request.status != OT.AWAITING:
+        raise DomainError("Este pedido de hora extra já foi respondido ou expirou.")
+    if now >= request.expires_at:
+        raise DomainError("Este pedido de hora extra expirou.")
+    if needs_running_shift and request.assignment.status != S.IN_PROGRESS:
+        raise DomainError("O turno não está mais em execução.")
+    return request
+
+
+def _payment_failed(request):
+    """O PSP recusou a retenção: o pedido continua pendente e os dois são avisados."""
+    request = OvertimeRequest.objects.select_related(
+        "assignment__vacancy__company", "assignment__worker__user"
+    ).get(pk=request.pk)
+    vacancy = request.assignment.vacancy
+    notify(
+        request.assignment.worker.user,
+        "HORA_EXTRA",
+        "Não foi possível confirmar a hora extra",
+        f"O pagamento da hora extra em “{vacancy.title}” não foi aprovado. O seu turno não foi "
+        "estendido; tente aceitar de novo.",
+        link="/meus-trabalhos",
+    )
+    notify_company(
+        vacancy.company,
+        "HORA_EXTRA",
+        "Pagamento da hora extra falhou",
+        f"O prestador aceitou a hora extra em “{vacancy.title}”, mas o pagamento da extensão "
+        "não foi aprovado. O turno não foi estendido.",
+    )
+
+
+def accept(request, *, actor=None, now=None):
+    """`AGUARDANDO_PRESTADOR → ACEITO`: a empresa paga a extensão em custódia e o turno estende.
+
+    Se o PSP falhar, nada muda (o pedido segue pendente), os dois são avisados e sobe
+    `DomainError`.
+    """
+    now = now or timezone.now()
+    try:
+        with transaction.atomic():
+            request = _lock_pending(request, now, needs_running_shift=True)
+            assignment = request.assignment
+            vacancy = assignment.vacancy
+            payments.retain_extension(vacancy.custody, request, actor=actor, now=now)
+            request = transition(
+                request,
+                OVERTIME_MACHINE,
+                OT.ACCEPTED,
+                actor=actor,
+                reason="Hora extra aceita pelo prestador",
+                now=now,
+                responded_at=now,
+            )
+            new_end = vacancy.ends_at + timedelta(minutes=request.minutes)
+            Assignment.objects.filter(pk=assignment.pk).update(extended_until=new_end)
+    except PaymentGatewayError:
+        _payment_failed(request)
+        raise DomainError(
+            "Não foi possível confirmar o pagamento da hora extra. O turno não foi estendido."
+        ) from None
+    notify_company(
+        vacancy.company,
+        "HORA_EXTRA",
+        "Hora extra aceita",
+        f"O prestador aceitou {minutes_label(request.minutes)} a mais em “{vacancy.title}”. "
+        f"O turno dele agora termina às {new_end.astimezone(LOCAL_TZ):%H:%M} e "
+        f"{format_brl(request.amount_cents)} foram retidos em custódia.",
+    )
+    return request
+
+
+@transaction.atomic
+def decline(request, *, actor=None, now=None):
+    """`AGUARDANDO_PRESTADOR → RECUSADO`, sem penalidade. Avisa a empresa."""
+    now = now or timezone.now()
+    request = _lock_pending(request, now, needs_running_shift=False)
+    request = transition(
+        request,
+        OVERTIME_MACHINE,
+        OT.DECLINED,
+        actor=actor,
+        reason="Hora extra recusada pelo prestador",
+        now=now,
+        responded_at=now,
+    )
+    vacancy = request.assignment.vacancy
+    notify_company(
+        vacancy.company,
+        "HORA_EXTRA",
+        "Hora extra recusada",
+        f"O prestador recusou o pedido de {minutes_label(request.minutes)} a mais em "
+        f"“{vacancy.title}”. Nada foi cobrado.",
+    )
+    return request

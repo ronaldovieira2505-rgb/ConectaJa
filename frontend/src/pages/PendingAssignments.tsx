@@ -186,6 +186,7 @@ export default function PendingAssignmentsSection({
                 <dt>Previsto</dt>
                 <dd>
                   {formatTime(a.starts_at)} às {formatTime(a.ends_at)}
+                  {(a.overtime_minutes ?? 0) > 0 && ' (com hora extra)'}
                 </dd>
               </div>
               <div>

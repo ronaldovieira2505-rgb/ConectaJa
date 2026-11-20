@@ -86,6 +86,16 @@ urlpatterns = [
         name="assignment-overtime",
     ),
     path(
+        "overtime/<int:pk>/accept/",
+        overtime_views.OvertimeAcceptView.as_view(),
+        name="overtime-accept",
+    ),
+    path(
+        "overtime/<int:pk>/decline/",
+        overtime_views.OvertimeDeclineView.as_view(),
+        name="overtime-decline",
+    ),
+    path(
         "assignments/<int:pk>/cancel-by-worker/",
         worker_views.AssignmentCancelByWorkerView.as_view(),
         name="assignment-cancel-by-worker",

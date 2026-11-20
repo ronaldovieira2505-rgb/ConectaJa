@@ -171,6 +171,52 @@ function ArrivalJustificationStatus({ justification }: { justification: ArrivalJ
   return null
 }
 
+/** Pedido de hora extra da empresa (US53): valores antes de responder e o resultado. */
+function OvertimeOffer({
+  item,
+  busy,
+  onAccept,
+  onDecline,
+}: {
+  item: JobItem
+  busy: boolean
+  onAccept: () => void
+  onDecline: () => void
+}) {
+  const request = item.overtime
+  if (!request) return null
+  if (request.status === 'AGUARDANDO_PRESTADOR' && item.can_respond_overtime) {
+    return (
+      <Alert>
+        <p className="m-0">
+          A empresa pediu <strong>{request.minutes_label} a mais</strong>. Valor bruto{' '}
+          {brl(request.amount_cents)} · você recebe <strong>{brl(request.net_cents)}</strong> (já
+          com a taxa descontada). Responda até {formatTime(request.expires_at)}.
+        </p>
+        <p className="m-0">Recusar não gera penalidade.</p>
+        <div className="acoes">
+          <Button busy={busy} onClick={onAccept}>
+            Aceitar hora extra
+          </Button>
+          <Button variant="secondary" onClick={onDecline}>
+            Recusar
+          </Button>
+        </div>
+      </Alert>
+    )
+  }
+  if (request.status === 'ACEITO') {
+    return (
+      <p>
+        Hora extra aceita: {request.minutes_label} a mais, você recebe {brl(request.net_cents)}.
+        {item.extended_until && <> O turno agora termina às {formatTime(item.extended_until)}.</>}
+      </p>
+    )
+  }
+  if (request.status === 'RECUSADO') return <p className="sub">Você recusou a hora extra.</p>
+  return null
+}
+
 /** Meus trabalhos (US38): candidaturas e alocações do prestador agrupadas por situação. */
 export default function MyJobsPage() {
   const [jobs, setJobs] = useState<MyJobs | null>(null)
@@ -293,6 +339,27 @@ export default function MyJobsPage() {
       await load()
       say(item, 'success', 'Justificativa enviada. A empresa foi avisada.')
     } catch (err) {
+      say(item, 'error', (err as Error).message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function answerOvertime(item: JobItem, action: 'accept' | 'decline') {
+    if (!item.overtime) return
+    setBusyId(item.id)
+    try {
+      await api(`/api/overtime/${item.overtime.id}/${action}/`, { method: 'POST' })
+      await load()
+      say(
+        item,
+        'success',
+        action === 'accept'
+          ? 'Hora extra aceita. A empresa foi avisada.'
+          : 'Hora extra recusada. A empresa foi avisada.',
+      )
+    } catch (err) {
+      await load()
       say(item, 'error', (err as Error).message)
     } finally {
       setBusyId(null)
@@ -444,6 +511,12 @@ export default function MyJobsPage() {
                           }`}
                       </p>
                     )}
+                    <OvertimeOffer
+                      item={item}
+                      busy={busyId === item.id}
+                      onAccept={() => answerOvertime(item, 'accept')}
+                      onDecline={() => answerOvertime(item, 'decline')}
+                    />
                     {item.can_check_out &&
                       (confirmingId === item.id ? (
                         <div className="acoes">

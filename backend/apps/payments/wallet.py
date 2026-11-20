@@ -2,10 +2,11 @@
 
 from datetime import timedelta
 
-from django.db.models import Sum
+from django.db.models import Max, Sum
 
 from apps.core.models import PlatformParameters
 from apps.payments.models import LedgerEntry
+from apps.vacancies import overtime
 from apps.vacancies.models import Assignment
 
 K = LedgerEntry.Kind
@@ -22,7 +23,7 @@ def _expected_release(assignment, params):
         return None
     if assignment.status == AS.AWAITING_VALIDATION and assignment.check_out_at:
         return assignment.check_out_at + window
-    return assignment.vacancy.ends_at + window
+    return (assignment.extended_until or assignment.vacancy.ends_at) + window
 
 
 def _shift_info(assignment):
@@ -44,16 +45,21 @@ def wallet_for(worker):
     assignments = (
         Assignment.objects.filter(worker=worker, status__in=RECEIVABLE_STATUSES)
         .select_related("vacancy__company")
+        .prefetch_related("overtime_requests")
         .order_by("vacancy__starts_at", "pk")
     )
     for assignment in assignments:
         expected = _expected_release(assignment, params)
+        net = params.worker_net_cents(assignment.vacancy.pay_per_person_cents)
+        extension = overtime.accepted_request(assignment)
+        if extension:  # a hora extra tem a própria taxa (US53)
+            net += params.worker_net_cents(extension.amount_cents)
         receivable.append(
             {
                 **_shift_info(assignment),
                 "status": assignment.status,
                 "status_label": assignment.get_status_display(),
-                "net_cents": params.worker_net_cents(assignment.vacancy.pay_per_person_cents),
+                "net_cents": net,
                 "expected_release_at": expected.isoformat() if expected else None,
                 "release_note": "" if expected else "após confirmação da empresa",
             }
@@ -70,20 +76,25 @@ def wallet_for(worker):
     }
     pix = worker.masked_pix_key
     released = []
+    # Uma linha por turno: o repasse do turno e o da hora extra (US53) somados.
     payouts = (
         entries.filter(kind=K.WORKER_PAYOUT)
-        .select_related("assignment__vacancy__company")
-        .order_by("-created_at", "-pk")
+        .values("assignment_id")
+        .annotate(total=Sum("amount_cents"), released_at=Max("created_at"))
+        .order_by("-released_at", "-assignment_id")
     )
-    for payout in payouts:
-        fee = fees.get(payout.assignment_id, 0)
+    shifts = Assignment.objects.select_related("vacancy__company").in_bulk(
+        [row["assignment_id"] for row in payouts]
+    )
+    for row in payouts:
+        fee = fees.get(row["assignment_id"], 0)
         released.append(
             {
-                **_shift_info(payout.assignment),
-                "released_at": payout.created_at.isoformat(),
-                "gross_cents": payout.amount_cents + fee,
+                **_shift_info(shifts[row["assignment_id"]]),
+                "released_at": row["released_at"].isoformat(),
+                "gross_cents": row["total"] + fee,
                 "fee_cents": fee,
-                "net_cents": payout.amount_cents,
+                "net_cents": row["total"],
                 "pix_destination": pix,
             }
         )

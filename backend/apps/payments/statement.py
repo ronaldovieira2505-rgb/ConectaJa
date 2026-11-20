@@ -88,18 +88,23 @@ def statement_rows(worker, start, end):
         .annotate(total=Sum("amount_cents"))
         .values_list("assignment_id", "total")
     )
-    rows = []
+    # Uma linha por turno: o repasse da hora extra (US53) soma ao do turno.
+    by_shift = {}
     for payout in payouts:
+        first_payout, net = by_shift.get(payout.assignment_id, (payout, 0))
+        by_shift[payout.assignment_id] = (first_payout, net + payout.amount_cents)
+    rows = []
+    for assignment_id, (payout, net) in by_shift.items():
         vacancy = payout.assignment.vacancy
-        fee = fees.get(payout.assignment_id, 0)
+        fee = fees.get(assignment_id, 0)
         rows.append(
             StatementRow(
                 shift_date=timezone.localdate(vacancy.starts_at),
                 company=vacancy.company.trade_name or vacancy.company.legal_name,
                 vacancy=vacancy.title,
-                gross_cents=payout.amount_cents + fee,
+                gross_cents=net + fee,
                 fee_cents=fee,
-                net_cents=payout.amount_cents,
+                net_cents=net,
                 paid_on=timezone.localdate(payout.created_at),
             )
         )

@@ -85,7 +85,7 @@ Calculados: `filled_positions` (alocações ativas), `worker_net_cents` = valor 
 ### Assignment — Alocação (o turno de um prestador)
 Criada quando a candidatura é aprovada. Campos: `vacancy`, `worker`, `application`, `status`,
 `check_in_at`, `check_in_lat`, `check_in_lng`, `check_in_distance_m`, `check_out_at`, `check_out_auto` (bool),
-`check_in_confirmed_by_company` (bool, check-in confirmado pela empresa ou pelo admin a partir de uma justificativa, US51), `validated_at`, `validated_by` (usuário ou `SISTEMA`), `contest_response` (texto de 10 a 1.000 caracteres, resposta única do prestador à contestação, US58) e `contest_response_at` (data e hora do envio; vazio = ainda não respondeu). A resposta não é um estado novo nem uma transição.
+`check_in_confirmed_by_company` (bool, check-in confirmado pela empresa ou pelo admin a partir de uma justificativa, US51), `extended_until` (novo fim do turno deste prestador depois de aceitar a hora extra, US53; vazio = fim da vaga), `validated_at`, `validated_by` (usuário ou `SISTEMA`), `contest_response` (texto de 10 a 1.000 caracteres, resposta única do prestador à contestação, US58) e `contest_response_at` (data e hora do envio; vazio = ainda não respondeu). A resposta não é um estado novo nem uma transição.
 
 ### ArrivalJustification — justificativa de chegada (US51)
 Uma por alocação (`assignment`, 1:1). Campos: `reason` (`GPS`, `BATERIA`, `ENDERECO`, `OUTRO`), `text` (até
@@ -108,6 +108,7 @@ A plataforma **não** guarda dinheiro: a custódia representa o valor retido no 
 ### LedgerEntry — Livro-razão (imutável, só inserção)
 `custody`, `assignment` (opcional), `kind`, `amount_cents` (> 0), `idempotency_key` (único), `created_at`.
 `kind`: `RETENCAO` (empresa pagou), `REPASSE_PRESTADOR` (97%), `TAXA_PLATAFORMA` (3%), `ESTORNO_CONTRATANTE` (posições não usadas ou cancelamento).
+A hora extra aceita (US53) tem lançamentos próprios: `RETENCAO` ligada à alocação (chave `overtime:<id>:retencao`) e, na liquidação, `REPASSE_PRESTADOR`/`TAXA_PLATAFORMA` separados dos do turno (chaves `...:repasse-extensao` e `...:taxa-extensao`).
 Invariante: `RETENCAO = REPASSE + TAXA + ESTORNO` quando a custódia é encerrada.
 
 ### Carteira do prestador (não é tabela — é visão calculada)
