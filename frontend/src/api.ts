@@ -119,8 +119,12 @@ export interface Vacancy {
   category_label: string
   description: string
   street: string
+  number?: string
+  complement?: string
+  district?: string
   city: string
   state: string
+  zip_code?: string
   latitude: string
   longitude: string
   starts_at: string

@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api, ApiError, brl, type Vacancy } from '../api'
 import { CATEGORIES } from '../categories'
-import { Alert, Button, Card, Field, SelectField } from '../components/ui'
+import { Alert, Button, Card, Field, Loading, SelectField } from '../components/ui'
 
 /** Converte "150,50" em centavos; 0 se não for um número válido. */
 function toCents(text: string): number {
@@ -10,28 +10,79 @@ function toCents(text: string): number {
   return Number.isFinite(value) ? Math.round(value * 100) : 0
 }
 
+/** Centavos no formato do campo: 10000 → "100,00". */
+function fromCents(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',')
+}
+
+const EMPTY_FORM = {
+  title: '',
+  category: 'CARGA_DESCARGA',
+  description: '',
+  street: '',
+  number: '',
+  complement: '',
+  district: '',
+  city: '',
+  state: '',
+  zip_code: '',
+  latitude: '',
+  longitude: '',
+  starts_at: '',
+  ends_at: '',
+  pay: '',
+  positions: '1',
+}
+
+/** Formulário preenchido com a vaga original (US25); data e horário ficam vazios. */
+function formFrom(source: Vacancy) {
+  return {
+    ...EMPTY_FORM,
+    title: source.title,
+    category: source.category,
+    description: source.description,
+    street: source.street ?? '',
+    number: source.number ?? '',
+    complement: source.complement ?? '',
+    district: source.district ?? '',
+    city: source.city ?? '',
+    state: source.state ?? '',
+    zip_code: source.zip_code ?? '',
+    latitude: source.latitude ?? '',
+    longitude: source.longitude ?? '',
+    pay: fromCents(source.pay_per_person_cents),
+    positions: String(source.positions),
+  }
+}
+
 /** Publicar vaga: cria em AGUARDANDO_PAGAMENTO e leva ao pagamento. */
 export default function CompanyVacancyNewPage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({
-    title: '',
-    category: 'CARGA_DESCARGA',
-    description: '',
-    street: '',
-    number: '',
-    city: '',
-    state: '',
-    latitude: '',
-    longitude: '',
-    starts_at: '',
-    ends_at: '',
-    pay: '',
-    positions: '1',
-  })
+  const [searchParams] = useSearchParams()
+  const duplicateId = searchParams.get('duplicar')
+  const [source, setSource] = useState<Vacancy | null>(null)
+  const [loadingSource, setLoadingSource] = useState(Boolean(duplicateId))
+  const [form, setForm] = useState(EMPTY_FORM)
   const [error, setError] = useState('')
   const [locating, setLocating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [photo, setPhoto] = useState<File | null>(null)
+
+  useEffect(() => {
+    if (!duplicateId) return
+    let active = true
+    api<Vacancy>(`/api/vacancies/${duplicateId}/`)
+      .then((vacancy) => {
+        if (!active) return
+        setSource(vacancy)
+        setForm(formFrom(vacancy))
+      })
+      .catch(() => active && setError('Não foi possível carregar a vaga para duplicar.'))
+      .finally(() => active && setLoadingSource(false))
+    return () => {
+      active = false
+    }
+  }, [duplicateId])
 
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [key]: e.target.value })
@@ -65,6 +116,10 @@ export default function CompanyVacancyNewPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setError('')
+    if (source && (!form.starts_at || !form.ends_at)) {
+      setError('Informe a data e o horário do novo turno.')
+      return
+    }
     setSubmitting(true)
     const toIso = (v: string) => (v ? new Date(v).toISOString() : '')
     try {
@@ -76,14 +131,18 @@ export default function CompanyVacancyNewPage() {
           description: form.description,
           street: form.street,
           number: form.number,
+          complement: form.complement,
+          district: form.district,
           city: form.city,
           state: form.state,
+          zip_code: form.zip_code,
           latitude: form.latitude,
           longitude: form.longitude,
           starts_at: toIso(form.starts_at),
           ends_at: toIso(form.ends_at),
           pay_per_person_cents: perPerson,
           positions,
+          ...(source ? { duplicate_of: source.id } : {}),
         },
       })
       if (photo) {
@@ -101,9 +160,17 @@ export default function CompanyVacancyNewPage() {
     }
   }
 
+  if (loadingSource) return <Loading rows={1} />
+
   return (
     <Card>
       <h1>Nova vaga</h1>
+      {source && (
+        <Alert tone="info">
+          Copiamos os dados de “{source.title}”. Escolha a data e o horário do novo turno.
+          {source.photo_url && ' A foto da vaga original também será copiada.'}
+        </Alert>
+      )}
       {error && <Alert tone="error">{error}</Alert>}
       <form onSubmit={onSubmit} noValidate>
         <fieldset className="bloco">

@@ -28,6 +28,14 @@ function VacancyRow({ vacancy }: { vacancy: Vacancy }) {
             <p className="m-0 text-[13px] leading-5 text-tinta-media">
               {formatShift(vacancy.starts_at, vacancy.ends_at)}
             </p>
+            {/* Acima do link que cobre o cartão, para continuar clicável (US25). */}
+            <Link
+              to={`/empresa/vagas/nova?duplicar=${vacancy.id}`}
+              className="relative z-10 self-start text-[13px] leading-5"
+              aria-label={`Duplicar ${vacancy.title}`}
+            >
+              Duplicar
+            </Link>
           </div>
           <div className="mt-auto flex items-end justify-between gap-3 border-t border-regua pt-4">
             <p className="m-0 flex flex-col">
