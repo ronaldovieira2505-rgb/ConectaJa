@@ -424,6 +424,46 @@ export interface JobItem {
   can_review?: boolean
   review_deadline?: string | null
   my_review?: { rating: number; comment: string } | null
+  // Justificativa quando o check-in pelo celular não funciona (US51).
+  can_justify_arrival?: boolean
+  arrival_justification?: ArrivalJustification | null
+  check_in_confirmed_by_company?: boolean
+}
+
+export type ArrivalReason = 'GPS' | 'BATERIA' | 'ENDERECO' | 'OUTRO'
+
+export const ARRIVAL_REASONS: { value: ArrivalReason; label: string }[] = [
+  { value: 'GPS', label: 'GPS não funciona' },
+  { value: 'BATERIA', label: 'Celular sem bateria' },
+  { value: 'ENDERECO', label: 'Endereço diferente do anúncio' },
+  { value: 'OUTRO', label: 'Outro' },
+]
+
+/** Pedido do prestador para a empresa confirmar a chegada (US51). */
+export interface ArrivalJustification {
+  id: number
+  reason: ArrivalReason
+  reason_label: string
+  text: string
+  status: 'PENDENTE' | 'COM_ADMIN' | 'CONFIRMADA' | 'RECUSADA'
+  status_label: string
+  decision_reason: string
+  created_at: string
+}
+
+/** Pedido de confirmação de chegada aguardando a empresa em "Confirmar presença" (US51). */
+export interface PendingArrivalJustification {
+  id: number
+  assignment_id: number
+  vacancy_id: number
+  vacancy_title: string
+  worker_first_name: string
+  starts_at: string
+  ends_at: string
+  reason: ArrivalReason
+  reason_label: string
+  text: string
+  created_at: string
 }
 
 export type JobGroupKey = 'waiting' | 'upcoming' | 'in_progress' | 'completed' | 'closed'

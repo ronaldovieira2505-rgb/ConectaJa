@@ -2,6 +2,8 @@ import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   api,
+  type ArrivalJustification,
+  type ArrivalReason,
   brl,
   formatDayMonthTime,
   formatShift,
@@ -10,6 +12,7 @@ import {
   type JobItem,
   type MyJobs,
 } from '../api'
+import ArrivalJustificationForm from '../components/ArrivalJustificationForm'
 import JobsTabs from '../components/JobsTabs'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
@@ -139,6 +142,35 @@ function ContestResponseForm({
   )
 }
 
+/** Situação do pedido de confirmação de chegada (US51). Confirmado aparece no horário do check-in. */
+function ArrivalJustificationStatus({ justification }: { justification: ArrivalJustification }) {
+  if (justification.status === 'PENDENTE') {
+    return (
+      <Alert>
+        Justificativa enviada ({justification.reason_label}). Aguardando a empresa confirmar a sua
+        chegada. Enquanto isso, o turno não conta como falta.
+      </Alert>
+    )
+  }
+  if (justification.status === 'COM_ADMIN') {
+    return (
+      <Alert>
+        A empresa não respondeu à sua justificativa. A equipe ConectaJá vai decidir sobre a sua
+        chegada.
+      </Alert>
+    )
+  }
+  if (justification.status === 'RECUSADA') {
+    return (
+      <Alert tone="error">
+        Sua justificativa de chegada foi recusada.
+        {justification.decision_reason && <> Motivo: {justification.decision_reason}</>}
+      </Alert>
+    )
+  }
+  return null
+}
+
 /** Meus trabalhos (US38): candidaturas e alocações do prestador agrupadas por situação. */
 export default function MyJobsPage() {
   const [jobs, setJobs] = useState<MyJobs | null>(null)
@@ -151,6 +183,7 @@ export default function MyJobsPage() {
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [cancellingId, setCancellingId] = useState<number | null>(null)
   const [reviewingId, setReviewingId] = useState<number | null>(null)
+  const [justifyingId, setJustifyingId] = useState<number | null>(null)
 
   function load() {
     return api<MyJobs>('/api/workers/me/jobs/')
@@ -242,6 +275,23 @@ export default function MyJobsPage() {
       setReviewingId(null)
       await load()
       say(item, 'success', 'Avaliação enviada. Obrigado!')
+    } catch (err) {
+      say(item, 'error', (err as Error).message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function justifyArrival(item: JobItem, reason: ArrivalReason, text: string) {
+    setBusyId(item.id)
+    try {
+      await api(`/api/assignments/${item.id}/arrival-justification/`, {
+        method: 'POST',
+        body: { reason, text },
+      })
+      setJustifyingId(null)
+      await load()
+      say(item, 'success', 'Justificativa enviada. A empresa foi avisada.')
     } catch (err) {
       say(item, 'error', (err as Error).message)
     } finally {
@@ -342,6 +392,23 @@ export default function MyJobsPage() {
                         </Button>
                       </div>
                     )}
+                    {item.can_justify_arrival &&
+                      (justifyingId === item.id ? (
+                        <ArrivalJustificationForm
+                          busy={busyId === item.id}
+                          onSubmit={(reason, text) => justifyArrival(item, reason, text)}
+                          onCancel={() => setJustifyingId(null)}
+                        />
+                      ) : (
+                        <div className="acoes">
+                          <Button variant="secondary" onClick={() => setJustifyingId(item.id)}>
+                            Não consigo registrar a chegada
+                          </Button>
+                        </div>
+                      ))}
+                    {item.arrival_justification && (
+                      <ArrivalJustificationStatus justification={item.arrival_justification} />
+                    )}
                     {item.status === 'CONFIRMADA' &&
                       !item.can_check_in &&
                       item.check_in_opens_at &&
@@ -370,6 +437,7 @@ export default function MyJobsPage() {
                     {item.check_in_at && (
                       <p>
                         Check-in feito às {formatTime(item.check_in_at)}
+                        {item.check_in_confirmed_by_company && ' (confirmado pela empresa)'}
                         {item.check_out_at &&
                           ` · Saída às ${formatTime(item.check_out_at)}${
                             item.check_out_auto ? ' (registrada automaticamente)' : ''

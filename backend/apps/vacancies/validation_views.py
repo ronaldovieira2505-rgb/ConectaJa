@@ -10,9 +10,10 @@ from rest_framework.response import Response
 
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
+from apps.vacancies import arrival
 from apps.vacancies import assignment_services as assignments
 from apps.vacancies import review_services as reviews
-from apps.vacancies.models import Assignment, Review
+from apps.vacancies.models import ArrivalJustification, Assignment, Review
 from apps.vacancies.views import NO_COMPANY, CompanyAreaView, forbidden_company
 from integrations.payments import PaymentGatewayError
 
@@ -68,11 +69,31 @@ def serialize_contested_assignment(assignment):
     }
 
 
+def serialize_arrival_justification(justification):
+    """Pedido de confirmação de chegada aguardando a empresa (US51)."""
+    assignment = justification.assignment
+    vacancy = assignment.vacancy
+    return {
+        "id": justification.pk,
+        "assignment_id": assignment.pk,
+        "vacancy_id": vacancy.pk,
+        "vacancy_title": vacancy.title,
+        "worker_first_name": _first_name(assignment.worker),
+        "starts_at": vacancy.starts_at.isoformat(),
+        "ends_at": vacancy.ends_at.isoformat(),
+        "reason": justification.reason,
+        "reason_label": justification.get_reason_display(),
+        "text": justification.text,
+        "created_at": justification.created_at.isoformat(),
+    }
+
+
 class CompanyPendingAssignmentsView(CompanyAreaView):
     """`GET /api/company/assignments/pending/`: alocações AGUARDANDO_VALIDACAO das minhas vagas.
 
     Filtro opcional `?vacancy=<id>` para a seção dentro da vaga. Traz também, em `contested`,
-    as alocações `CONTESTADA` com o motivo e a resposta do prestador (US58).
+    as alocações `CONTESTADA` com o motivo e a resposta do prestador (US58) e, em
+    `arrival_justifications`, os pedidos de confirmação de chegada aguardando resposta (US51).
     """
 
     def get(self, request):
@@ -91,6 +112,11 @@ class CompanyPendingAssignmentsView(CompanyAreaView):
             status=Assignment.Status.AWAITING_VALIDATION, check_out_at__isnull=False
         )
         contested = owned.filter(status=Assignment.Status.CONTESTED)
+        justifications = ArrivalJustification.objects.filter(
+            assignment__in=owned,
+            assignment__status=Assignment.Status.CONFIRMED,
+            status=ArrivalJustification.Status.PENDING,
+        ).select_related("assignment__vacancy", "assignment__worker")
         params = PlatformParameters.get()
         now = timezone.now()
         items = [
@@ -102,6 +128,10 @@ class CompanyPendingAssignmentsView(CompanyAreaView):
                 "results": items,
                 "contested": [
                     serialize_contested_assignment(a) for a in contested.order_by("pk")
+                ],
+                "arrival_justifications": [
+                    serialize_arrival_justification(j)
+                    for j in justifications.order_by("created_at", "pk")
                 ],
             }
         )
@@ -143,6 +173,52 @@ class AssignmentApproveView(CompanyAreaView):
                 "status": assignment.status,
                 "status_label": assignment.get_status_display(),
                 "payment_pending": payment_pending,
+            }
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class ArrivalJustificationDecideView(CompanyAreaView):
+    """`POST /api/assignments/<id>/arrival-justification/decide/` (US51).
+
+    `{"confirm": true}` confirma a chegada (`CONFIRMADA → EM_EXECUCAO`, check-in no horário do
+    pedido); `{"confirm": false, "reason": "..."}` recusa. Outra empresa: 404. Sem motivo: 400.
+    """
+
+    def post(self, request, pk):
+        company = self.company(request)
+        denied = forbidden_company(company)
+        if denied:
+            return denied
+        justification = (
+            ArrivalJustification.objects.select_related("assignment")
+            .filter(assignment_id=pk, assignment__vacancy__company=company)
+            .first()
+        )
+        if justification is None:
+            return Response({"detail": "Justificativa não encontrada."}, status=404)
+        confirm = request.data.get("confirm")
+        if not isinstance(confirm, bool):
+            return Response({"detail": "Informe se confirma a chegada."}, status=400)
+        reason = request.data.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+        if not confirm and not reason.strip():
+            return Response({"detail": "Informe o motivo da recusa."}, status=400)
+        try:
+            justification = arrival.decide_by_company(
+                justification, confirm=confirm, reason=reason, actor=request.user
+            )
+        except DomainError as error:  # inclui InvalidTransition
+            return Response({"detail": str(error)}, status=409)
+        assignment = Assignment.objects.get(pk=justification.assignment_id)
+        return Response(
+            {
+                "id": justification.pk,
+                "status": justification.status,
+                "status_label": justification.get_status_display(),
+                "assignment_status": assignment.status,
+                "assignment_status_label": assignment.get_status_display(),
             }
         )
 

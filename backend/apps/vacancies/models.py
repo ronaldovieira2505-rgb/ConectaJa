@@ -217,6 +217,12 @@ class Assignment(models.Model):
     )
     check_out_at = models.DateTimeField("check-out", null=True, blank=True)
     check_out_auto = models.BooleanField("check-out automático", default=False)
+    check_in_confirmed_by_company = models.BooleanField(
+        "check-in confirmado pela empresa",
+        default=False,
+        help_text="A chegada foi confirmada pela empresa (ou pelo admin) a partir de uma "
+        "justificativa do prestador (US51).",
+    )
     validated_at = models.DateTimeField("validada em", null=True, blank=True)
     validated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -335,3 +341,51 @@ class VacancyInvite(models.Model):
 
     def __str__(self):
         return f"Convite #{self.pk}"
+
+
+class ArrivalJustification(models.Model):
+    """Justificativa do prestador que não conseguiu registrar a chegada pelo celular (US51).
+
+    Enquanto `PENDENTE` (ou com o admin), a falta automática fica suspensa.
+    """
+
+    class Reason(models.TextChoices):
+        GPS = "GPS", "GPS não funciona"
+        BATTERY = "BATERIA", "Celular sem bateria"
+        ADDRESS = "ENDERECO", "Endereço diferente do anúncio"
+        OTHER = "OUTRO", "Outro"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDENTE", "Aguardando a empresa"
+        ADMIN = "COM_ADMIN", "Em análise pela equipe"
+        CONFIRMED = "CONFIRMADA", "Chegada confirmada"
+        REFUSED = "RECUSADA", "Recusada"
+
+    TEXT_MAX_LENGTH = 300
+
+    assignment = models.OneToOneField(
+        Assignment, on_delete=models.CASCADE, related_name="arrival_justification"
+    )
+    reason = models.CharField("motivo", max_length=10, choices=Reason.choices)
+    text = models.CharField("explicação", max_length=TEXT_MAX_LENGTH, blank=True)
+    status = models.CharField(
+        "situação", max_length=12, choices=Status.choices, default=Status.PENDING
+    )
+    created_at = models.DateTimeField("enviada em", default=timezone.now)
+    decided_at = models.DateTimeField("decidida em", null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name="decidida por",
+    )
+    decision_reason = models.TextField("motivo da decisão", blank=True)
+
+    class Meta:
+        verbose_name = "justificativa de chegada"
+        verbose_name_plural = "justificativas de chegada"
+
+    def __str__(self):
+        return f"Justificativa da alocação #{self.assignment_id}"

@@ -55,7 +55,10 @@ Estados finais: `APROVADA` (o acompanhamento continua na alocação), `RECUSADA`
 |---|---|---|---|
 | — | Candidatura aprovada | `CONFIRMADA` | — |
 | `CONFIRMADA` | Prestador faz check-in (US50) | `EM_EXECUCAO` | Agora entre `starts_at` − *antecedência do check-in (30 min)* e `starts_at` + *tolerância de falta (30 min)*; distância até a vaga ≤ *raio (150 m)* (fórmula de Haversine). Guarda horário, coordenadas e distância |
-| `CONFIRMADA` | SISTEMA: agora > `starts_at` + *tolerância de falta (30 min)* sem check-in | `FALTA` | Libera a posição, reabre a vaga, notifica a empresa (US55), conta para a suspensão automática |
+| `CONFIRMADA` | Empresa confirma a chegada justificada (US51) | `EM_EXECUCAO` | Há justificativa `PENDENTE` do prestador. `check_in_at` = horário do pedido, `check_in_confirmed_by_company = true`, sem coordenadas. Notifica o prestador |
+| `CONFIRMADA` | Admin decide pela presença (US51) | `EM_EXECUCAO` | Justificativa `COM_ADMIN` (a empresa não respondeu até `ends_at`). Mesmos efeitos da confirmação pela empresa |
+| `CONFIRMADA` | SISTEMA: agora > `starts_at` + *tolerância de falta (30 min)* sem check-in | `FALTA` | Libera a posição, reabre a vaga, notifica a empresa (US55), conta para a suspensão automática. **Não se aplica** enquanto houver justificativa de chegada `PENDENTE` ou `COM_ADMIN` (US51) |
+| `CONFIRMADA` | Admin decide pela falta (US51) | `FALTA` | Justificativa `COM_ADMIN`. Mesmos efeitos da falta automática, com o admin como autor |
 | `CONFIRMADA` | Prestador cancela [pós-MVP: US72] | `CANCELADA_PRESTADOR` | ≥ *1440 min (24 h)* antes: sem penalidade. Menos que isso: bloqueio de *7 dias* + rebaixamento de status. Libera a posição |
 | `CONFIRMADA` | Empresa cancela (US71) | `CANCELADA_EMPRESA` | Só se faltar ≥ *1440 min (24 h)* para `starts_at` (`free_cancel_minutes_before`); motivo obrigatório. Estorno da posição (`ESTORNO_CONTRATANTE`); notifica o prestador. A posição **não** volta para a busca |
 | `EM_EXECUCAO` | Prestador faz check-out (US54) | `AGUARDANDO_VALIDACAO` | Guarda o horário de saída |
@@ -68,6 +71,19 @@ Estados finais: `APROVADA` (o acompanhamento continua na alocação), `RECUSADA`
 | `APROVADA` | SISTEMA: liquidação | `PAGA` | Lançamentos `REPASSE_PRESTADOR` (valor − 3%) e `TAXA_PLATAFORMA` (3%), com chave de idempotência por alocação. Se o PSP falhar, continua `APROVADA` e o próximo processamento tenta de novo |
 
 Estados finais: `PAGA`, `FALTA`, `ESTORNADA`, `CANCELADA_PRESTADOR`, `CANCELADA_EMPRESA`.
+
+**Justificativa de chegada (US51)** (`ArrivalJustification`, uma por alocação):
+
+| De | Evento / ator | Para | Condições e efeitos |
+|---|---|---|---|
+| — | Prestador envia motivo + explicação | `PENDENTE` | Alocação `CONFIRMADA`, dentro da janela de check-in. Notifica a empresa |
+| `PENDENTE` | Empresa confirma a chegada | `CONFIRMADA` | Alocação vai para `EM_EXECUCAO` |
+| `PENDENTE` | Empresa recusa com motivo | `RECUSADA` | Notifica o prestador; a alocação segue `CONFIRMADA` e volta a valer a regra de falta |
+| `PENDENTE` | SISTEMA: agora ≥ `ends_at` sem resposta | `COM_ADMIN` | Notifica os admins. Idempotente |
+| `COM_ADMIN` | Admin decide pela presença | `CONFIRMADA` | Alocação vai para `EM_EXECUCAO` |
+| `COM_ADMIN` | Admin decide pela falta | `RECUSADA` | Alocação vai para `FALTA` |
+
+Se o prestador conseguir fazer o check-in normal depois de enviar o pedido, o pedido deixa de aparecer para a empresa e não vai para o admin.
 `CONTESTADA` depende de ação do admin. O painel deve destacar contestações abertas há mais de 48 h.
 
 ---

@@ -64,6 +64,16 @@ urlpatterns = [
         name="assignment-check-out",
     ),
     path(
+        "assignments/<int:pk>/arrival-justification/",
+        worker_views.ArrivalJustificationView.as_view(),
+        name="assignment-arrival-justification",
+    ),
+    path(
+        "assignments/<int:pk>/arrival-justification/decide/",
+        validation_views.ArrivalJustificationDecideView.as_view(),
+        name="assignment-arrival-justification-decide",
+    ),
+    path(
         "assignments/<int:pk>/cancel-by-worker/",
         worker_views.AssignmentCancelByWorkerView.as_view(),
         name="assignment-cancel-by-worker",

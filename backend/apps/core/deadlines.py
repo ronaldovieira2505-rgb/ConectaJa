@@ -8,8 +8,8 @@ from django.utils import timezone
 
 from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters
+from apps.vacancies import arrival, reminders
 from apps.vacancies import assignment_services as assignments
-from apps.vacancies import reminders
 from apps.vacancies import services as vacancies
 from apps.vacancies.models import Assignment, Vacancy
 from apps.workers.models import Worker
@@ -81,11 +81,17 @@ def process_deadlines(now=None):
     if sent:
         done["lembretes"] = sent
 
-    # 5. Falta (suspensão automática é efeito colateral e fica registrada em StateTransition).
+    # 5. Justificativa de chegada sem resposta da empresa até o fim do turno → admin (US51).
+    escalated = arrival.escalate_overdue(now=now)
+    if escalated:
+        done["justificativas_para_admin"] = escalated
+
+    # 6. Falta (suspensão automática é efeito colateral e fica registrada em StateTransition).
+    # Um pedido de justificativa em análise (empresa ou admin) não vira falta automática (US51).
     no_shows = Assignment.objects.filter(
         status=S.CONFIRMED,
         vacancy__starts_at__lt=now - timedelta(minutes=p.no_show_tolerance_minutes),
-    )
+    ).exclude(arrival_justification__status__in=arrival.OPEN_STATUSES)
     def register_no_show(assignment):
         before = Worker.objects.get(pk=assignment.worker_id).suspended_until
         assignments.mark_no_show(assignment, now=now)
@@ -95,14 +101,14 @@ def process_deadlines(now=None):
 
     _apply(done, "faltas", no_shows, register_no_show)
 
-    # 6. Check-out automático.
+    # 7. Check-out automático.
     overdue = Assignment.objects.filter(
         status=S.IN_PROGRESS,
         vacancy__ends_at__lt=now - timedelta(minutes=p.auto_checkout_minutes_after_end),
     )
     _apply(done, "checkouts_automaticos", overdue, lambda a: assignments.auto_check_out(a, now=now))
 
-    # 7. Aprovação automática por decurso da janela de contestação.
+    # 8. Aprovação automática por decurso da janela de contestação.
     silent = Assignment.objects.filter(
         status=S.AWAITING_VALIDATION,
         check_out_at__lte=now - timedelta(minutes=p.contest_window_minutes),
@@ -111,7 +117,7 @@ def process_deadlines(now=None):
         done, "aprovacoes_automaticas", silent, lambda a: assignments.auto_approve_hours(a, now=now)
     )
 
-    # 8. Liquidação.
+    # 9. Liquidação.
     _apply(
         done,
         "liquidacoes",
@@ -119,7 +125,7 @@ def process_deadlines(now=None):
         lambda a: assignments.settle(a, now=now),
     )
 
-    # 9. Finalização das vagas.
+    # 10. Finalização das vagas.
     # Só as que já podem fechar: uma vaga com turno à espera de validação não é erro, e
     # tentar finalizá-la a cada execução só enchia o log de avisos.
     in_progress = [

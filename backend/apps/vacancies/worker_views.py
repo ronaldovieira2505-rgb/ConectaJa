@@ -13,11 +13,11 @@ from apps.core.exceptions import DomainError, InvalidTransition
 from apps.core.models import PlatformParameters
 from apps.core.permissions import IsWorkerUser
 from apps.vacancies import application_services as applications
+from apps.vacancies import arrival, favorites
 from apps.vacancies import assignment_services as assignments
-from apps.vacancies import favorites
 from apps.vacancies import review_services as reviews
 from apps.vacancies import waitlist_services as waitlist
-from apps.vacancies.models import Application, Assignment, Vacancy
+from apps.vacancies.models import Application, ArrivalJustification, Assignment, Vacancy
 from apps.vacancies.photos import photo_url
 
 AS = Assignment.Status
@@ -77,6 +77,40 @@ def _execution_info(assignment, params, now):
         "contest_response_at": assignment.contest_response_at
         and assignment.contest_response_at.isoformat(),
         **_review_info(assignment, params, now),
+        **_arrival_info(assignment, params, now),
+    }
+
+
+def serialize_justification(justification):
+    if justification is None:
+        return None
+    return {
+        "id": justification.pk,
+        "reason": justification.reason,
+        "reason_label": justification.get_reason_display(),
+        "text": justification.text,
+        "status": justification.status,
+        "status_label": justification.get_status_display(),
+        "decision_reason": justification.decision_reason,
+        "created_at": justification.created_at.isoformat(),
+    }
+
+
+def _justification_of(assignment):
+    try:
+        return assignment.arrival_justification
+    except ArrivalJustification.DoesNotExist:
+        return None
+
+
+def _arrival_info(assignment, params, now):
+    """Botão "Não consigo registrar a chegada" (US51) e a situação do pedido, se houver."""
+    justification = _justification_of(assignment)
+    return {
+        "can_justify_arrival": justification is None
+        and arrival.can_justify(assignment, now=now, params=params),
+        "arrival_justification": serialize_justification(justification),
+        "check_in_confirmed_by_company": assignment.check_in_confirmed_by_company,
     }
 
 
@@ -189,7 +223,9 @@ class WorkerJobsView(WorkerAreaView):
             else:  # APROVADA: o acompanhamento continua na alocação
                 continue
             groups[key].append(serialize_application(application, params))
-        for assignment in worker.assignments.select_related("vacancy__company"):
+        for assignment in worker.assignments.select_related(
+            "vacancy__company", "arrival_justification"
+        ):
             if assignment.status == AS.CONFIRMED:
                 key = "upcoming"
             elif assignment.status in IN_PROGRESS_STATUSES:
@@ -238,6 +274,20 @@ class AssignmentCheckInView(AssignmentActionView):
         if lat is None or lng is None:
             raise DomainError("Informe a sua localização para registrar a chegada.")
         return assignments.check_in(assignment, lat=lat, lng=lng, actor=request.user)
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class ArrivalJustificationView(AssignmentActionView):
+    """`POST /api/assignments/<id>/arrival-justification/` com `reason` e `text` (US51).
+
+    Para quando o check-in pelo celular não funciona: a empresa confirma ou recusa a chegada.
+    """
+
+    def run(self, request, assignment):
+        arrival.submit(
+            assignment, reason=request.data.get("reason"), text=request.data.get("text", "")
+        )
+        return Assignment.objects.select_related("vacancy__company").get(pk=assignment.pk)
 
 
 @method_decorator(csrf_protect, name="dispatch")

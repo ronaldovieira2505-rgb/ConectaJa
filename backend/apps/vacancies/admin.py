@@ -11,9 +11,16 @@ from django.utils.html import format_html
 
 from apps.core.exceptions import DomainError
 from apps.core.models import StateTransition
+from apps.vacancies import arrival, history
 from apps.vacancies import assignment_services as assignments
-from apps.vacancies import history
-from apps.vacancies.models import Application, Assignment, Review, Vacancy, VacancyChange
+from apps.vacancies.models import (
+    Application,
+    ArrivalJustification,
+    Assignment,
+    Review,
+    Vacancy,
+    VacancyChange,
+)
 from integrations.payments import PaymentGatewayError
 
 logger = logging.getLogger(__name__)
@@ -241,3 +248,51 @@ class ReviewAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(ArrivalJustification)
+class ArrivalJustificationAdmin(admin.ModelAdmin):
+    """Pedidos de confirmação de chegada sem resposta da empresa até o fim do turno (US51)."""
+
+    list_display = ("id", "assignment", "reason", "text", "status", "created_at", "decided_at")
+    list_filter = ("status", "reason")
+    actions = ("confirm_presence", "confirm_no_show")
+    readonly_fields = (
+        "assignment",
+        "reason",
+        "text",
+        "status",
+        "created_at",
+        "decided_at",
+        "decided_by",
+        "decision_reason",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def _decide(self, request, queryset, presence):
+        done = 0
+        for justification in queryset:
+            try:
+                arrival.decide_by_admin(justification, presence=presence, actor=request.user)
+            except DomainError as error:
+                self.message_user(request, f"#{justification.pk}: {error}", messages.ERROR)
+                continue
+            done += 1
+        if done:
+            label = "presença confirmada" if presence else "falta confirmada"
+            self.message_user(request, f"{done} pedido(s): {label}.", messages.SUCCESS)
+
+    @admin.action(
+        description="Confirmar presença (check-in no horário do pedido)", permissions=["change"]
+    )
+    def confirm_presence(self, request, queryset):
+        self._decide(request, queryset, presence=True)
+
+    @admin.action(description="Confirmar falta", permissions=["change"])
+    def confirm_no_show(self, request, queryset):
+        self._decide(request, queryset, presence=False)
