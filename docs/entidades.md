@@ -101,8 +101,8 @@ alocação. As transições ficam em `StateTransition` (`entity_type = "Overtime
 
 ## Confiança e segurança
 
-### Report — denúncia (US69)
-App `reports`. Campos: `reporter` (usuário que denunciou), `target_type` (`VAGA` ou `EMPRESA`), `company` (empresa denunciada: o alvo, ou a dona da vaga denunciada), `vacancy` (só quando o alvo é uma vaga), `reason` (`VAGA_FALSA`, `PAGAMENTO_POR_FORA`, `CONDICOES_DIFERENTES`, `COMPORTAMENTO`, `OUTRO`), `description` (10 a 1.000 caracteres), `status` (`ABERTA`, `EM_ANALISE`, `PROCEDENTE`, `IMPROCEDENTE`), `created_at`, `decided_at`, `decided_by` e `decision` (parecer do admin). Restrição: uma denúncia aberta (`ABERTA` ou `EM_ANALISE`) por pessoa e por alvo. A empresa denunciada nunca vê a denúncia nem quem denunciou.
+### Report — denúncia (US69/US70)
+App `reports`. Campos: `reporter` (usuário que denunciou), `reporter_company` (empresa de quem denunciou um prestador, US70), `target_type` (`VAGA`, `EMPRESA` ou `PRESTADOR`), `company` (empresa denunciada: o alvo, ou a dona da vaga denunciada), `vacancy` (só quando o alvo é uma vaga), `worker` e `assignment` (prestador denunciado e a alocação dele numa vaga da empresa, US70), `reason` (de empresa/vaga: `VAGA_FALSA`, `PAGAMENTO_POR_FORA`, `CONDICOES_DIFERENTES`, `COMPORTAMENTO`, `OUTRO`; de prestador: `COMPORTAMENTO`, `DANO_FURTO`, `ASSEDIO`, `DOCUMENTO_FALSO`, `OUTRO`), `description` (10 a 1.000 caracteres), `status` (`ABERTA`, `EM_ANALISE`, `PROCEDENTE`, `IMPROCEDENTE`), `created_at`, `decided_at`, `decided_by` e `decision` (parecer do admin). Restrições: uma denúncia aberta (`ABERTA` ou `EM_ANALISE`) por pessoa e por alvo (vaga ou empresa) e uma por empresa e por alocação (prestador). O denunciado nunca vê a denúncia nem quem denunciou.
 
 ## Dinheiro (simulado no MVP, mesmo desenho do PSP real)
 
