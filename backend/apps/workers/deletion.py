@@ -83,6 +83,9 @@ def delete_worker_account(worker, *, password, now=None):
         worker.pix_key = ""
         worker.home_latitude = None
         worker.home_longitude = None
+        # Habilidades e resumo (US08): o resumo é texto livre e pode ter dados pessoais.
+        worker.skills = []
+        worker.bio = ""
         worker.save()
 
         user.username = f"prestador-removido-{user.pk}"

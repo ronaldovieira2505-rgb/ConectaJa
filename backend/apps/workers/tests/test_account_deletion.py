@@ -62,7 +62,9 @@ def paid_assignment(worker):
 def test_deletion_anonymizes_personal_data_and_keeps_financial_records(
     private_media, django_capture_on_commit_callbacks
 ):
-    worker = with_documents(make_worker(phone="11988887777"))
+    worker = with_documents(
+        make_worker(phone="11988887777", skills=["LIMPEZA"], bio="Sou a Ana, moro na Sé.")
+    )
     email, old_cpf = worker.user.email, worker.cpf
     paid = paid_assignment(worker)
     ledger_before = LedgerEntry.objects.count()
@@ -77,6 +79,7 @@ def test_deletion_anonymizes_personal_data_and_keeps_financial_records(
     assert worker.cpf != old_cpf and not worker.cpf.isdigit()
     assert (worker.phone, worker.pix_key, worker.pix_key_type) == ("", "", "")
     assert worker.birth_date.year == 1900
+    assert (worker.skills, worker.bio) == ([], "")
     user = worker.user
     assert (user.email, user.first_name, user.is_active) == ("", "", False)
     assert not user.has_usable_password()
