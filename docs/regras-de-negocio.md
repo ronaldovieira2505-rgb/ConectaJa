@@ -20,6 +20,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `min_publish_lead_minutes` | 720 (12 h) | Antecedência mínima entre a publicação e o início do turno |
 | `payment_deadline_minutes` | 1440 (24 h) | Prazo para pagar uma vaga criada; depois ela é cancelada |
 | `applications_close_minutes_before` | 120 (2 h) | Candidaturas encerram X min antes do início |
+| `shift_reminder_minutes_before` | 1440 (24 h) | O prestador com alocação confirmada recebe um lembrete (uma única vez) a partir de X min antes do início (US49) |
 | `checkin_open_minutes_before` | 30 | Check-in liberado a partir de X min antes do início |
 | `no_show_tolerance_minutes` | 30 | Sem check-in até X min após o início = falta |
 | `geofence_radius_m` | 150 | Distância máxima para aceitar o check-in |
@@ -32,7 +33,7 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 | `review_window_days` | 7 | Prazo, em dias após a aprovação das horas, para a empresa avaliar o prestador (US63) e o prestador avaliar a empresa (US64); deve ser maior que zero |
 | `worker_fee_percent` | 3 | Taxa retida do prestador |
 
-**Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
+**Unidades e validação (US79):** todo prazo que era em horas passou a ser em **minutos** (os prazos em dias continuam em dias), o que permite demonstrar janelas curtas (ex.: contestação de 2 min). O admin edita os valores em "Parâmetros da plataforma"; a alteração vale de imediato e fica auditada (quem, quando, valor anterior e novo). Valores negativos são rejeitados. Exigem valor maior que zero: `payment_deadline_minutes`, `shift_reminder_minutes_before`, `geofence_radius_m`, `contest_window_minutes`, `no_show_limit`, `no_show_window_days` e `suspension_days`, `review_window_days`. Os demais prazos aceitam 0. `worker_fee_percent` é inteiro entre 0 e 100.
 
 **Suspensão manual de conta (US76):** só o admin suspende ou reativa, sempre com motivo. A suspensão tem de 1 a 365 dias ou é por tempo indeterminado. Empresa suspensa não cria nem paga vagas novas (vê "Conta suspensa até ..."), mas as vagas já publicadas continuam valendo. Prestador suspenso não se candidata nem é aprovado, e mantém as alocações já confirmadas. Banimento definitivo e recurso do usuário ficam fora do escopo.
 
@@ -84,6 +85,8 @@ Arredondamento: taxa = 3% do valor em centavos, arredondada para o centavo mais 
 ## 8. Notificações
 
 Somente dentro do app (sino com contador): aprovação ou recusa de candidatura, falta (para a empresa), vaga reaberta, aprovação de horas, pagamento liberado e resultado da verificação.
+
+**Lembrete do turno (US49):** o `processar_prazos` avisa o prestador de cada alocação `CONFIRMADA` cujo início está a até `shift_reminder_minutes_before`, com vaga, empresa, data e horário, endereço completo, link "Ver no mapa" e o horário em que o check-in abre. O título diz "amanhã" (ou "hoje", se a aprovação veio em cima da hora). Cada alocação recebe no máximo um lembrete, garantido pela chave de idempotência da notificação; alocação cancelada, em falta ou já iniciada não recebe.
 
 ## 9. Fora do produto (decisões do PO)
 
