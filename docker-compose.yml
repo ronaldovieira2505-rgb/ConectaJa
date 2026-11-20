@@ -1,5 +1,10 @@
-# PostgreSQL para desenvolvimento local (uso opcional).
-# Os valores coincidem com .env.example e com o CI.
+# Ambiente local com Docker.
+#
+#   docker compose up -d                      -> só o PostgreSQL (para rodar backend e frontend fora do Docker)
+#   docker compose --profile app up --build   -> tudo como em produção: banco, site e prazos
+#                                                em http://localhost:8080
+#
+# Os valores do banco coincidem com .env.example e com o CI. Nada aqui é segredo de verdade.
 services:
   db:
     image: postgres:16
@@ -17,5 +22,42 @@ services:
       timeout: 5s
       retries: 10
 
+  # Site: a mesma imagem publicada pelo CI, montada a partir do Dockerfile da raiz.
+  web:
+    profiles: ["app"]
+    build: .
+    image: conecta-ja:local
+    environment: &app-env
+      SECRET_KEY: compose-only-not-a-secret
+      DEBUG: "false"
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      CSRF_TRUSTED_ORIGINS: http://localhost:8080
+      # Sem proxy HTTPS na frente, então nada de redirecionar para https.
+      SECURE_SSL_REDIRECT: "false"
+      DATABASE_URL: postgres://conectaja:conectaja@db:5432/conectaja
+      LOG_LEVEL: INFO
+      SEED_DEMO: "true"
+    ports:
+      - "8080:8000"
+    volumes:
+      - media:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Prazos: mesma imagem, processando a cada 60 s (no Azure é um Job agendado).
+  prazos:
+    profiles: ["app"]
+    image: conecta-ja:local
+    command: ["prazos", "--loop", "60"]
+    environment: *app-env
+    # A sonda da imagem chama o site; este contêiner não serve HTTP.
+    healthcheck:
+      disable: true
+    depends_on:
+      web:
+        condition: service_healthy  # espera as migrações do site terminarem
+
 volumes:
   pgdata:
+  media:

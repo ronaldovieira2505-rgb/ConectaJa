@@ -6,7 +6,8 @@ serviços manuais de curta duração. Projeto acadêmico (`MVP_Ecommerce`).
 - `backend/`: Django + Django REST Framework + PostgreSQL
 - `frontend/`: React + TypeScript (Vite), estilos em `src/styles/app.css` + utilitários Tailwind
 - `docs/`: documentação de domínio
-- `docs/deploy-azure.md`: publicação em produção
+- `docs/deploy-container-apps.md`: publicação em produção (Docker + Azure Container Apps)
+- `Dockerfile` e `docker-compose.yml`: imagem única (site + prazos) e ambiente local completo
 - `scripts/`: utilitários de build e publicação
 - `docs/guia-do-repositorio.md`: regras do projeto
 
@@ -20,7 +21,7 @@ Os comandos abaixo são para o **PowerShell**, a partir da raiz do repositório.
 
 ## Banco de dados
 
-Opção 1 — Docker (recomendado):
+Opção 1 — Docker (recomendado): sobe só o PostgreSQL.
 
 ```powershell
 docker compose up -d
@@ -142,7 +143,26 @@ login; as variáveis estão em `.env.example`. Para conferir a configuração:
 python backend\manage.py check --deploy
 ```
 
-O passo a passo da publicação está em `docs/deploy-azure.md`.
+### Rodar a imagem de produção na sua máquina
+
+Com Docker Desktop aberto, sobe PostgreSQL, site e prazos a partir do `Dockerfile`, com
+dados de demonstração, em <http://localhost:8080>:
+
+```powershell
+docker compose --profile app up --build
+```
+
+Para parar: `docker compose --profile app down` (acrescente `-v` para apagar banco e arquivos).
+
+### Publicar
+
+A cada push na `main`, o CI monta a imagem, testa o contêiner e publica em
+`ghcr.io/<dono>/conecta-ja` (tags `latest` e commit). O passo a passo no Azure Container Apps
+está em `docs/deploy-container-apps.md`. O deploy antigo por zip no App Service F1
+(`docs/deploy-azure.md`) continua valendo para demonstração.
+
+Sondas de saúde: `/api/health/live/` (o processo responde) e `/api/health/` (também
+confere o banco). Toda resposta traz `X-Request-ID`, o mesmo identificador que aparece nos logs.
 
 ## Integrações externas
 
