@@ -1,5 +1,9 @@
 # Deploy no Azure (plano gratuito)
 
+> Este é o deploy simplificado, por zip no App Service F1 com SQLite, bom só para
+> demonstração. O caminho recomendado é a imagem Docker no Azure Container Apps com
+> PostgreSQL: veja [deploy-container-apps.md](deploy-container-apps.md).
+
 Um único **App Service Linux F1 (Free)** roda o Django com gunicorn e serve também o build do
 React (WhiteNoise). Frontend e API ficam na mesma origem, então a sessão e o CSRF funcionam sem
 CORS. O banco é **SQLite** no disco persistente do App Service (`/home/data`).

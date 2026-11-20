@@ -4,6 +4,7 @@ from . import notification_views, views
 
 urlpatterns = [
     path("health/", views.health, name="health"),
+    path("health/live/", views.health_live, name="health-live"),
     path("auth/", include("apps.accounts.urls")),
     path("", include("apps.companies.urls")),
     path("", include("apps.workers.urls")),

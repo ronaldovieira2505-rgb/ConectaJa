@@ -1,6 +1,7 @@
 """Configurações do Django, lidas de variáveis de ambiente."""
 
 import os
+import re
 from pathlib import Path
 
 import dj_database_url
@@ -49,6 +50,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Sondas de saúde antes de tudo: respondem mesmo com host interno e por HTTP.
+    "apps.core.middleware.HealthCheckMiddleware",
+    "apps.core.middleware.RequestIdMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -117,6 +121,15 @@ FRONTEND_DIST = Path(os.environ.get("FRONTEND_DIST", BASE_DIR / "frontend_dist")
 if (FRONTEND_DIST / "index.html").exists():
     WHITENOISE_ROOT = FRONTEND_DIST
 
+# O Vite põe um hash no nome dos arquivos de /assets/ (ex.: index-D2l3T8Xi.js): o conteúdo
+# nunca muda para o mesmo nome, então o navegador pode guardar por um ano.
+_VITE_HASHED_ASSET = re.compile(r"^/?assets/.+-[A-Za-z0-9_-]{8,}\.\w+$")
+
+
+def WHITENOISE_IMMUTABLE_FILE_TEST(path, url):  # noqa: N802 (nome exigido pelo WhiteNoise)
+    return bool(_VITE_HASHED_ASSET.match(url))
+
+
 # ─── Segurança em produção (DEBUG desligado) ─────────────────────────────────
 # O app roda atrás do proxy HTTPS da hospedagem, que informa o protocolo original
 # no cabeçalho X-Forwarded-Proto.
@@ -125,7 +138,7 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
     # A sonda de saúde da hospedagem chega por HTTP dentro da rede interna.
-    SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
+    SECURE_REDIRECT_EXEMPT = [r"^api/health/(live/)?$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     # HSTS começa curto (1 hora); aumente pela variável depois de validar o domínio.
@@ -143,10 +156,20 @@ SECURE_REFERRER_POLICY = "same-origin"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {"request_id": {"()": "apps.core.middleware.RequestIdLogFilter"}},
     "formatters": {
-        "simples": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+        "simples": {
+            "format": "{asctime} {levelname} {name} [{request_id}]: {message}",
+            "style": "{",
+        },
     },
-    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "simples"}},
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simples",
+            "filters": ["request_id"],
+        }
+    },
     "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "WARNING")},
 }
 

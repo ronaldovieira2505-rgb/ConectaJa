@@ -92,15 +92,63 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  # Monta a imagem Docker em todo PR (garante que o Dockerfile continua funcionando), sobe o
+  # contêiner e chama as sondas. Só no push para a main a imagem é publicada no GitHub
+  # Container Registry: ghcr.io/<dono>/conecta-ja com a tag do commit e a tag latest.
+  imagem:
+    needs: [detect, backend, frontend]
+    if: needs.detect.outputs.backend == 'true' && needs.detect.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Nome da imagem
+        run: |
+          echo "IMAGEM=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/conecta-ja" >> "$GITHUB_ENV"
+          echo "TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+      # O label liga o pacote ao repositório; sem ele o GITHUB_TOKEN pode não ter permissão de
+      # escrita no pacote e o push termina em "denied".
+      - name: Montar a imagem
+        run: >-
+          docker build -t "$IMAGEM:$TAG" -t "$IMAGEM:latest"
+          --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}"
+          --label "org.opencontainers.image.revision=${{ github.sha }}" .
+      - name: Testar o contêiner (sondas, site e prazos)
+        run: |
+          docker run -d --name smoke -p 8000:8000 \
+            -e SECRET_KEY=ci-only-not-a-secret -e DEBUG=false -e ALLOWED_HOSTS=localhost \
+            -e DATABASE_URL=sqlite:////tmp/smoke.sqlite3 "$IMAGEM:$TAG"
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/api/health/ && break
+            sleep 2
+          done
+          # Sonda chega pelo IP interno: tem de responder mesmo com host fora de ALLOWED_HOSTS.
+          curl -fsS -H "Host: 10.0.0.5:8000" http://localhost:8000/api/health/live/
+          # O site é servido pelo próprio Django (com o cabeçalho do proxy HTTPS).
+          curl -fsS -H "X-Forwarded-Proto: https" http://localhost:8000/ | grep -q '<div id="root">'
+          docker exec smoke sh docker-entrypoint.sh prazos
+          docker logs smoke
+          docker rm -f smoke
+      - name: Publicar no GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGEM:$TAG"
+          docker push "$IMAGEM:latest"
+          echo "Publicada: $IMAGEM:$TAG" >> "$GITHUB_STEP_SUMMARY"
+
   # Único check obrigatório na proteção da main: falha se qualquer job acima falhar.
   ci-ok:
     if: always()
-    needs: [detect, backend, frontend]
+    needs: [detect, backend, frontend, imagem]
     runs-on: ubuntu-latest
     steps:
       - name: Resultado agregado
         run: |
-          echo "detect=${{ needs.detect.result }} backend=${{ needs.backend.result }} frontend=${{ needs.frontend.result }}"
+          echo "detect=${{ needs.detect.result }} backend=${{ needs.backend.result }} frontend=${{ needs.frontend.result }} imagem=${{ needs.imagem.result }}"
           if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
             exit 1
           fi
