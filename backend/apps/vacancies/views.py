@@ -343,8 +343,9 @@ class VacancyDetailView(PublicReadMixin, CompanyAreaView):
 
 
     def public_detail(self, request, pk):
-        """Detalhe para o prestador: só vagas que aparecem na busca (US12/US17)."""
-        vacancy = search.detail_vacancy(pk)
+        """Detalhe para o prestador: vagas da busca (US12/US17) e as encerradas em que ele
+        se candidatou ou trabalhou."""
+        vacancy = search.detail_vacancy(pk, request.user)
         if vacancy is None:
             return Response({"detail": "Vaga não encontrada."}, status=404)
         return Response(search.serialize_detail(vacancy, request.user))

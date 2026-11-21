@@ -126,26 +126,34 @@ export default function VacancyPublicDetailPage() {
           <dt>Local</dt>
           <dd>{where}</dd>
         </div>
-        <div>
-          <dt>Em aberto</dt>
-          <dd>
-            {vacancy.remaining_positions}{' '}
-            {vacancy.remaining_positions === 1 ? 'vaga restante' : 'vagas restantes'}
-          </dd>
-        </div>
+        {!vacancy.closed && (
+          <div>
+            <dt>Em aberto</dt>
+            <dd>
+              {vacancy.remaining_positions}{' '}
+              {vacancy.remaining_positions === 1 ? 'vaga restante' : 'vagas restantes'}
+            </dd>
+          </div>
+        )}
       </dl>
-      <div className="acoes">
-        <Button disabled={!vacancy.can_apply} busy={applying} onClick={handleApply}>
-          {sent ? 'Candidatura enviada' : 'Quero esta vaga'}
-        </Button>
-      </div>
+      {vacancy.closed ? (
+        <Alert>{vacancy.apply_blocker}</Alert>
+      ) : (
+        <div className="acoes">
+          <Button disabled={!vacancy.can_apply} busy={applying} onClick={handleApply}>
+            {sent ? 'Candidatura enviada' : 'Quero esta vaga'}
+          </Button>
+        </div>
+      )}
       {sent && vacancy.my_application?.status === 'PENDENTE' && (
         <Alert tone="success">
           Candidatura enviada! Acompanhe em <Link to="/meus-trabalhos">Meus trabalhos</Link>.
         </Alert>
       )}
       {applyError && <Alert tone="error">{applyError}</Alert>}
-      {vacancy.apply_blocker && !applyError && !sent && <Alert>{vacancy.apply_blocker}</Alert>}
+      {vacancy.apply_blocker && !vacancy.closed && !applyError && !sent && (
+        <Alert>{vacancy.apply_blocker}</Alert>
+      )}
       {vacancy.equipment && (
         <EquipmentLists
           bring={vacancy.equipment.bring}

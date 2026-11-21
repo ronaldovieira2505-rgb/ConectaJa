@@ -426,6 +426,8 @@ export interface VacancyPublicDetail extends VacancyCard {
   can_apply: boolean
   apply_blocker: string | null
   my_application: { id: number; status: string; status_label: string } | null
+  // Vaga finalizada ou cancelada, vista por quem participou dela.
+  closed?: boolean
 }
 
 /** Item de "Meus trabalhos": uma candidatura ou uma alocação (US37/US38). */
