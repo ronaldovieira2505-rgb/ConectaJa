@@ -186,20 +186,29 @@ def serialize_card(vacancy, distance_m=None, params=None, ratings=None, favorite
     }
 
 
-def detail_vacancy(pk):
-    """Vaga paga e ainda em curso, mesmo sem aceitar candidaturas (o botão explica o motivo)."""
-    return (
-        Vacancy.objects.filter(
-            pk=pk, status__in=(V.PUBLISHED, V.APPLICATIONS_CLOSED, V.IN_PROGRESS)
-        )
+CLOSED_STATUSES = (V.FINISHED, V.CANCELLED)
+
+
+def detail_vacancy(pk, user=None):
+    """Vaga paga e ainda em curso, mesmo sem aceitar candidaturas (o botão explica o motivo).
+
+    Quem se candidatou (ou trabalhou) na vaga continua vendo o detalhe depois que ela é
+    finalizada ou cancelada: "Meus trabalhos" e a Carteira têm link para ela.
+    """
+    found = (
+        Vacancy.objects.filter(pk=pk)
         .select_related("company", "custody")
         .annotate(
             filled=Count(
                 "assignments", filter=Q(assignments__status__in=Assignment.UNAVAILABLE_STATUSES)
             )
         )
-        .first()
     )
+    vacancy = found.filter(status__in=(V.PUBLISHED, V.APPLICATIONS_CLOSED, V.IN_PROGRESS)).first()
+    if vacancy is None and user is not None and user.is_authenticated:
+        mine = Application.objects.filter(vacancy_id=pk, worker__user=user)
+        vacancy = found.filter(status__in=CLOSED_STATUSES, pk__in=mine.values("vacancy_id")).first()
+    return vacancy
 
 
 def serialize_rules(params):
@@ -247,6 +256,11 @@ def serialize_detail(vacancy, user, now=None):
             ),
         }
     )
+    # Vaga encerrada (só quem participou chega aqui): o aviso substitui o motivo de bloqueio.
+    data["closed"] = vacancy.status in CLOSED_STATUSES
+    if data["closed"]:
+        cancelled = vacancy.status == V.CANCELLED
+        data["apply_blocker"] = f"Esta vaga foi {'cancelada' if cancelled else 'finalizada'}."
     data["can_apply"] = data["apply_blocker"] is None
     data["favorite"] = bool(
         worker and FavoriteVacancy.objects.filter(worker=worker, vacancy=vacancy).exists()
