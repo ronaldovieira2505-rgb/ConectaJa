@@ -10,8 +10,10 @@ import {
   type ContestedAssignment,
   type PendingArrivalJustification,
   type PendingAssignment,
+  type ReviewableAssignment,
 } from '../api'
 import CancelReasonForm from '../components/CancelReasonForm'
+import RatingForm from '../components/RatingForm'
 import { Alert, Badge, Button } from '../components/ui'
 
 /** Horas a conferir: previsto × registrado e aprovação com liberação do pagamento (US56/US59). */
@@ -29,6 +31,9 @@ export default function PendingAssignmentsSection({
   const [contestingId, setContestingId] = useState<number | null>(null)
   const [arrivals, setArrivals] = useState<PendingArrivalJustification[]>([])
   const [refusingId, setRefusingId] = useState<number | null>(null)
+  const [toReview, setToReview] = useState<ReviewableAssignment[]>([])
+  const [reviewingId, setReviewingId] = useState<number | null>(null)
+  const [reviewBusy, setReviewBusy] = useState(false)
 
   const load = useCallback(async () => {
     const query = vacancyId !== undefined ? `?vacancy=${vacancyId}` : ''
@@ -37,10 +42,12 @@ export default function PendingAssignmentsSection({
         results: PendingAssignment[]
         contested?: ContestedAssignment[]
         arrival_justifications?: PendingArrivalJustification[]
+        to_review?: ReviewableAssignment[]
       }>(`/api/company/assignments/pending/${query}`)
       setItems(data.results)
       setContested(data.contested ?? [])
       setArrivals(data.arrival_justifications ?? [])
+      setToReview(data.to_review ?? [])
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível carregar as horas a conferir.')
     }
@@ -105,6 +112,26 @@ export default function PendingAssignmentsSection({
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível registrar a decisão.')
       await load()
+    }
+  }
+
+  async function reviewWorker(item: ReviewableAssignment, rating: number, comment: string) {
+    setError('')
+    setNotice('')
+    setReviewBusy(true)
+    try {
+      await api(`/api/assignments/${item.id}/review/`, {
+        method: 'POST',
+        body: { rating, comment },
+      })
+      setReviewingId(null)
+      setNotice(`Avaliação de ${item.worker_first_name} enviada. O prestador já pode vê-la.`)
+      await load()
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Não foi possível enviar a avaliação.')
+      await load()
+    } finally {
+      setReviewBusy(false)
     }
   }
 
@@ -174,6 +201,43 @@ export default function PendingAssignmentsSection({
       )}
       {items.length === 0 && arrivals.length === 0 && (
         <p>Nenhuma presença aguardando confirmação.</p>
+      )}
+      {toReview.length > 0 && (
+        <>
+          <h3>Avaliar prestadores</h3>
+          <p className="sub">Opcional: a nota não muda o pagamento e fica visível para o prestador.</p>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {toReview.map((r) => (
+              <li key={r.id} className="rounded-cartao bg-white p-4">
+                <strong>{r.worker_first_name}</strong>
+                {vacancyId === undefined && <> · {r.vacancy_title}</>}{' '}
+                <Badge tone="success">{r.status_label}</Badge>
+                <p className="sub">
+                  {formatTime(r.starts_at)} às {formatTime(r.ends_at)}
+                  {r.review_deadline && <> · avalie até {formatDayMonthTime(r.review_deadline)}</>}
+                </p>
+                {reviewingId === r.id ? (
+                  <RatingForm
+                    legend={`Sua nota para ${r.worker_first_name}`}
+                    busy={reviewBusy}
+                    onSubmit={(rating, comment) => reviewWorker(r, rating, comment)}
+                    onCancel={() => setReviewingId(null)}
+                  />
+                ) : (
+                  <div className="acoes">
+                    <Button
+                      variant="secondary"
+                      aria-label={`Avaliar ${r.worker_first_name}`}
+                      onClick={() => setReviewingId(r.id)}
+                    >
+                      Avaliar prestador
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {items.map((a) => (

@@ -90,12 +90,30 @@ def serialize_arrival_justification(justification):
     }
 
 
+def serialize_reviewable_assignment(assignment, params):
+    """Turno com horas aprovadas que a empresa ainda pode avaliar (US63)."""
+    vacancy = assignment.vacancy
+    deadline = reviews.review_deadline(assignment, params)
+    return {
+        "id": assignment.pk,
+        "vacancy_id": vacancy.pk,
+        "vacancy_title": vacancy.title,
+        "worker_first_name": _first_name(assignment.worker),
+        "starts_at": vacancy.starts_at.isoformat(),
+        "ends_at": vacancy.ends_at.isoformat(),
+        "status": assignment.status,
+        "status_label": assignment.get_status_display(),
+        "review_deadline": deadline and deadline.isoformat(),
+    }
+
+
 class CompanyPendingAssignmentsView(CompanyAreaView):
     """`GET /api/company/assignments/pending/`: alocações AGUARDANDO_VALIDACAO das minhas vagas.
 
     Filtro opcional `?vacancy=<id>` para a seção dentro da vaga. Traz também, em `contested`,
-    as alocações `CONTESTADA` com o motivo e a resposta do prestador (US58) e, em
-    `arrival_justifications`, os pedidos de confirmação de chegada aguardando resposta (US51).
+    as alocações `CONTESTADA` com o motivo e a resposta do prestador (US58), em
+    `arrival_justifications`, os pedidos de confirmação de chegada aguardando resposta (US51) e,
+    em `to_review`, os turnos aprovados que a empresa ainda pode avaliar (US63).
     """
 
     def get(self, request):
@@ -121,6 +139,14 @@ class CompanyPendingAssignmentsView(CompanyAreaView):
         ).select_related("assignment__vacancy", "assignment__worker")
         params = PlatformParameters.get()
         now = timezone.now()
+        window_start = now - timedelta(days=params.review_window_days)
+        reviewable = [
+            a
+            for a in owned.filter(
+                status__in=reviews.REVIEWABLE_STATUSES, validated_at__gte=window_start
+            ).order_by("validated_at", "pk")
+            if reviews.can_company_review(a, now=now, params=params)
+        ]
         items = [
             serialize_pending_assignment(a, params, now)
             for a in queryset.order_by("check_out_at", "pk")
@@ -135,6 +161,7 @@ class CompanyPendingAssignmentsView(CompanyAreaView):
                     serialize_arrival_justification(j)
                     for j in justifications.order_by("created_at", "pk")
                 ],
+                "to_review": [serialize_reviewable_assignment(a, params) for a in reviewable],
             }
         )
 

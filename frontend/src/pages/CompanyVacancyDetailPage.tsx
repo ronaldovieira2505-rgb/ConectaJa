@@ -321,7 +321,8 @@ export default function CompanyVacancyDetailPage() {
           {['PUBLICADA', 'CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
             <InviteWorkersSection vacancyId={vacancy.id} />
           )}
-          {['CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO'].includes(vacancy.status) && (
+          {['CANDIDATURAS_ENCERRADAS', 'EM_ANDAMENTO', 'FINALIZADA'].includes(vacancy.status) && (
+            // Na vaga finalizada a seção continua para a avaliação dos prestadores (US63).
             <PendingAssignmentsSection vacancyId={vacancy.id} onChange={refreshVacancy} />
           )}
           {vacancy.status === 'AGUARDANDO_PAGAMENTO' && (
