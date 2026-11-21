@@ -9,6 +9,7 @@ from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
+from apps.core.admin_files import private_file_link
 from apps.core.exceptions import DomainError
 from apps.core.models import StateTransition
 from apps.vacancies import arrival, history
@@ -22,6 +23,7 @@ from apps.vacancies.models import (
     Vacancy,
     VacancyChange,
 )
+from apps.vacancies.photos import photo_url
 from integrations.payments import PaymentGatewayError
 
 logger = logging.getLogger(__name__)
@@ -50,7 +52,13 @@ class VacancyAdmin(admin.ModelAdmin):
     list_display = ("title", "company", "starts_at", "positions", "status", "reopened")
     list_filter = ("status", "category")
     search_fields = ("title",)
-    readonly_fields = ("status", "reopened")
+    # A foto fica no armazenamento privado: aparece como link e só se troca pela API.
+    exclude = ("photo",)
+    readonly_fields = ("photo_link", "status", "reopened")
+
+    @admin.display(description="Foto do local")
+    def photo_link(self, obj):
+        return private_file_link(photo_url(obj), "Ver foto")
 
     def get_urls(self):
         custom = [
