@@ -568,6 +568,19 @@ export interface PendingAssignment {
   can_contest: boolean
 }
 
+/** Turno com horas aprovadas que a empresa ainda pode avaliar (US63). */
+export interface ReviewableAssignment {
+  id: number
+  vacancy_id: number
+  vacancy_title: string
+  worker_first_name: string
+  starts_at: string
+  ends_at: string
+  status: string
+  status_label: string
+  review_deadline: string | null
+}
+
 /** Alocação contestada, com o motivo da empresa e a versão do prestador (US58). */
 export interface ContestedAssignment {
   id: number

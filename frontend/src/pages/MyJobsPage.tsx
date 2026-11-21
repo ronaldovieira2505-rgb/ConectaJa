@@ -14,6 +14,7 @@ import {
 } from '../api'
 import ArrivalJustificationForm from '../components/ArrivalJustificationForm'
 import JobsTabs from '../components/JobsTabs'
+import RatingForm from '../components/RatingForm'
 import { Alert, Badge, Button, Card, Loading } from '../components/ui'
 import VacancyCover from '../components/VacancyCover'
 
@@ -30,67 +31,6 @@ function badgeTone(status: string): 'neutral' | 'success' | 'warning' | 'info' {
   if (['CONFIRMADA', 'PAGA', 'APROVADA'].includes(status)) return 'success'
   if (['EM_EXECUCAO', 'AGUARDANDO_VALIDACAO', 'CONTESTADA'].includes(status)) return 'info'
   return 'neutral'
-}
-
-/** Formulário de "Avaliar empresa" (US64): nota de 1 a 5 e comentário opcional de até 500 caracteres. */
-function ReviewCompanyForm({
-  busy,
-  onSubmit,
-  onCancel,
-}: {
-  busy: boolean
-  onSubmit: (rating: number, comment: string) => void
-  onCancel: () => void
-}) {
-  const [rating, setRating] = useState(0)
-  const [comment, setComment] = useState('')
-  const id = useId()
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (rating > 0) onSubmit(rating, comment)
-      }}
-    >
-      <fieldset className="m-0 border-0 p-0">
-        <legend>Sua nota para a empresa</legend>
-        <div className="acoes">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <label key={value}>
-              <input
-                type="radio"
-                name={`nota-${id}`}
-                value={value}
-                checked={rating === value}
-                onChange={() => setRating(value)}
-              />{' '}
-              {value} {value === 1 ? 'estrela' : 'estrelas'}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <div className="field">
-        <label htmlFor={`comentario-${id}`}>Comentário (opcional)</label>
-        <textarea
-          id={`comentario-${id}`}
-          maxLength={500}
-          rows={3}
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-        />
-        <small>{comment.length}/500</small>
-      </div>
-      <p>A avaliação é definitiva e não pode ser editada depois de enviada.</p>
-      <div className="acoes">
-        <Button type="submit" busy={busy} disabled={rating === 0}>
-          Enviar avaliação
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          Voltar
-        </Button>
-      </div>
-    </form>
-  )
 }
 
 const RESPONSE_MIN = 10
@@ -561,7 +501,8 @@ export default function MyJobsPage() {
                       ))}
                     {item.can_review &&
                       (reviewingId === item.id ? (
-                        <ReviewCompanyForm
+                        <RatingForm
+                          legend="Sua nota para a empresa"
                           busy={busyId === item.id}
                           onSubmit={(rating, comment) => reviewCompany(item, rating, comment)}
                           onCancel={() => setReviewingId(null)}
