@@ -1,17 +1,8 @@
-import { CATEGORIES } from '../categories'
+import { categoryGradient } from '../categoryColors'
 import CategoryIcon from './CategoryIcon'
 
-/** Tons do gradiente da marca: cada categoria fica com um, para a grade não ficar toda igual. */
-const TINTS = [
-  'bg-[color-mix(in_oklab,var(--gradiente-inicio)_18%,white)]',
-  'bg-[color-mix(in_oklab,var(--gradiente-meio)_16%,white)]',
-  'bg-[color-mix(in_oklab,var(--gradiente-fim)_18%,white)]',
-]
-
-function tintFor(category: string) {
-  const index = CATEGORIES.findIndex((c) => c.value === category)
-  return TINTS[(index < 0 ? 0 : index) % TINTS.length]
-}
+/** Pontilhado claro sobre o gradiente: dá textura à capa sem competir com o ícone. */
+const DOTS = 'radial-gradient(rgb(255 255 255 / 22%) 1.2px, transparent 1.3px)'
 
 /**
  * Imagem da vaga: a foto do local enviada pela empresa ou, sem foto, a capa da categoria.
@@ -40,13 +31,15 @@ export default function VacancyCover({
   }
   return (
     <span
-      className={`grid place-items-center ${tintFor(category)} ${className}`}
+      className={`relative grid place-items-center overflow-hidden ${className}`}
+      style={{ backgroundImage: `${DOTS}, ${categoryGradient(category)}`, backgroundSize: '14px 14px, auto' }}
       aria-hidden="true"
     >
+      <span className="absolute -right-[12%] -bottom-[30%] aspect-square w-[55%] rounded-full bg-white/12" />
       <CategoryIcon
         category={category}
-        className="size-[28%] max-h-20 max-w-20 text-tinta/60"
-        strokeWidth={0.9}
+        className="relative size-[34%] max-h-24 max-w-24 text-white drop-shadow-[0_6px_14px_rgb(0_0_0/18%)]"
+        strokeWidth={1.1}
       />
     </span>
   )

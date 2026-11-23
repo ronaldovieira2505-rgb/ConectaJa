@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, HardHat } from 'lucide-react'
+import { ArrowRight, Banknote, Building2, HardHat, MapPinCheck, Megaphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api, type VacancyCard } from '../api'
@@ -7,17 +7,34 @@ import { Alert } from '../components/ui'
 import CategoryGrid from '../components/landing/CategoryGrid'
 import Disclosure, { type DisclosureItem } from '../components/landing/Disclosure'
 import HomeSearch from '../components/landing/HomeSearch'
+import TrustBar from '../components/landing/TrustBar'
 import OpenVacancies from '../components/landing/OpenVacancies'
 
 const STEPS = [
-  { title: 'A empresa publica e paga', body: 'O valor fica retido antes de a vaga aparecer.' },
-  { title: 'O prestador se candidata', body: 'A empresa escolhe quem aprovar.' },
-  { title: 'Presença confirmada, PIX feito', body: 'Check-in e check-out por localização.' },
+  {
+    icon: Megaphone,
+    color: '#4A74C9',
+    title: 'A empresa publica e paga',
+    body: 'O valor fica retido antes de a vaga aparecer.',
+  },
+  {
+    icon: MapPinCheck,
+    color: '#8C5DC0',
+    title: 'O prestador vai ao turno',
+    body: 'A empresa aprova e o check-in é feito no local.',
+  },
+  {
+    icon: Banknote,
+    color: '#D9637A',
+    title: 'Horas confirmadas, PIX feito',
+    body: 'O valor é liberado assim que a presença é confirmada.',
+  },
 ]
 
 const SIDES = [
   {
     icon: HardHat,
+    gradient: 'linear-gradient(135deg, #F59E0B, #EA580C)',
     title: 'Quero trabalhar',
     body: 'Veja quanto recebe antes de se candidatar.',
     action: 'Criar conta de prestador',
@@ -25,6 +42,7 @@ const SIDES = [
   },
   {
     icon: Building2,
+    gradient: 'linear-gradient(135deg, #4A74C9, #8C5DC0)',
     title: 'Quero contratar',
     body: 'Publique um turno e escolha entre candidatos verificados.',
     action: 'Cadastrar minha empresa',
@@ -104,7 +122,8 @@ export default function LandingPage() {
           Sua conta foi excluída e seus dados pessoais foram apagados.
         </Alert>
       )}
-      <HomeSearch />
+      <HomeSearch vacancies={vacancies} />
+      <TrustBar />
       <CategoryGrid vacancies={vacancies} />
       <OpenVacancies vacancies={vacancies} />
 
@@ -113,17 +132,27 @@ export default function LandingPage() {
           Como funciona
         </h2>
         <ol className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-3">
-          {STEPS.map((step, index) => (
-            <li key={step.title} className="flex items-start gap-4 rounded-[24px] bg-ficha p-5">
+          {STEPS.map(({ icon: Icon, color, title, body }, index) => (
+            <li
+              key={title}
+              className="relative flex flex-col gap-4 overflow-hidden rounded-[24px] bg-ficha p-6"
+            >
               <span
-                className="grid size-8 shrink-0 place-items-center rounded-full bg-tinta text-[13px] text-papel"
+                className="absolute top-3 right-5 text-[64px] leading-none text-tinta/6 select-none"
                 aria-hidden="true"
               >
                 {index + 1}
               </span>
+              <span
+                className="grid size-12 place-items-center rounded-2xl text-white shadow-[0_8px_18px_rgb(32_32_32/14%)]"
+                style={{ backgroundColor: color }}
+                aria-hidden="true"
+              >
+                <Icon className="size-6" strokeWidth={1.5} />
+              </span>
               <span className="flex flex-col gap-1">
-                <span className="text-[15px] leading-6">{step.title}</span>
-                <span className="text-[13px] leading-5 text-tinta-media">{step.body}</span>
+                <span className="text-[15px] leading-6">{title}</span>
+                <span className="text-[13px] leading-5 text-tinta-media">{body}</span>
               </span>
             </li>
           ))}
@@ -135,12 +164,18 @@ export default function LandingPage() {
           Comece agora
         </h2>
         <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2">
-          {SIDES.map(({ icon: Icon, title, body, action, to }) => (
+          {SIDES.map(({ icon: Icon, gradient, title, body, action, to }) => (
             <li
               key={to}
               className="flex flex-col items-start gap-4 rounded-cartao border border-regua bg-papel p-6 md:p-8"
             >
-              <Icon className="size-7" strokeWidth={1.25} aria-hidden="true" />
+              <span
+                className="grid size-14 place-items-center rounded-2xl text-white shadow-[0_10px_22px_rgb(32_32_32/16%)]"
+                style={{ backgroundImage: gradient }}
+                aria-hidden="true"
+              >
+                <Icon className="size-7" strokeWidth={1.5} />
+              </span>
               <div className="flex flex-col gap-1">
                 <h3 className="m-0 text-[17px] leading-6 tracking-normal">{title}</h3>
                 <p className="m-0 text-[13px] leading-5 text-tinta-media">{body}</p>
