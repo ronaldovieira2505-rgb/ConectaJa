@@ -13,6 +13,7 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { Role } from '../api'
 import { useAuth } from '../authContext'
+import Logo from './Logo'
 import NotificationBell from './NotificationBell'
 import { Alert, Button } from './ui'
 
@@ -67,7 +68,7 @@ export default function Layout() {
       <header className="app-header">
         {user && (
           <Link to="/" className="app-brand app-brand-logado">
-            Conecta Já
+            <Logo />
           </Link>
         )}
         {user ? (
@@ -111,7 +112,7 @@ export default function Layout() {
       </header>
       {!user && (
         <Link to="/" className="app-brand">
-          Conecta Já
+          <Logo />
         </Link>
       )}
       <main className={isLanding ? 'app-main app-main-larga' : 'app-main'} id="conteudo">
