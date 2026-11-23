@@ -106,7 +106,7 @@ describe('Duplicar vaga (US25)', () => {
     expect(await screen.findByLabelText('Título')).toHaveValue('Carga e descarga')
     expect(screen.getByLabelText('Descrição do escopo')).toHaveValue('Descarregar caminhão')
     expect(screen.getByLabelText('Endereço')).toHaveValue('Praça da Sé')
-    expect(screen.getByLabelText('Latitude')).toHaveValue('-23.550520')
+    expect(screen.getByLabelText('Latitude (opcional)')).toHaveValue('-23.550520')
     expect(screen.getByLabelText('Valor por pessoa (R$)')).toHaveValue('125,50')
     expect(screen.getByLabelText('Número de pessoas')).toHaveValue(3)
     expect(screen.getByLabelText('Início')).toHaveValue('')
