@@ -15,6 +15,7 @@ from apps.companies.models import Company, CompanyMember
 from apps.companies.services import review_company
 from apps.companies.state_machine import COMPANY_VERIFICATION_MACHINE
 from apps.core.demo_history import build_current_state, build_history
+from apps.core.exceptions import DomainError
 from apps.core.models import PlatformParameters, PlatformParametersChange
 from apps.core.state_machine import record_creation
 from apps.vacancies import application_services as applications
@@ -324,6 +325,12 @@ def make_cnpj(base8):
     return base12 + first + second
 
 
+
+def _whole_hour(moment):
+    """Arredonda para a próxima hora cheia: o anúncio mostra 15:00, não 15:06."""
+    return moment.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+
+
 class Command(BaseCommand):
     help = "Cria dados de demonstração (idempotente). Use --prazos-curtos para a demo ao vivo."
 
@@ -450,8 +457,21 @@ class Command(BaseCommand):
         params.save()
 
     def _vacancy(self, company, title, starts_at, hours, now, **fields):
-        """Cria a vaga uma única vez (por empresa e título). Devolve (vaga, criada)."""
-        existing = Vacancy.objects.filter(company=company, title=title).first()
+        """Cria a vaga se não houver uma aberta com o mesmo título. Devolve (vaga, criada).
+
+        Uma vaga que já começou, terminou ou foi cancelada não conta: rodar o comando de novo
+        dias depois repõe o catálogo, para a busca do site publicado não ir esvaziando.
+        """
+        existing = (
+            Vacancy.objects.filter(
+                company=company,
+                title=title,
+                status__in=[Vacancy.Status.AWAITING_PAYMENT, Vacancy.Status.PUBLISHED],
+                starts_at__gt=now,
+            )
+            .order_by("-pk")
+            .first()
+        )
         if existing is not None:
             return existing, False
         vacancy = vacancies.create_vacancy(
@@ -472,7 +492,7 @@ class Command(BaseCommand):
         vacancy, created = self._vacancy(
             company_a,
             "Carga e descarga no Centro",
-            now + timedelta(days=2),
+            _whole_hour(now + timedelta(days=2)),
             4,
             now,
             category="CARGA_DESCARGA",
@@ -496,7 +516,7 @@ class Command(BaseCommand):
         vacancy, created = self._vacancy(
             company_b,
             "Montagem de evento na Paulista",
-            now + timedelta(days=3),
+            _whole_hour(now + timedelta(days=3)),
             6,
             now,
             category="EVENTOS",
@@ -520,7 +540,7 @@ class Command(BaseCommand):
         vacancy, created = self._vacancy(
             company_a,
             "Limpeza pós-obra no Ibirapuera",
-            now + timedelta(days=1),
+            _whole_hour(now + timedelta(days=1)),
             5,
             now,
             category="LIMPEZA",
@@ -539,14 +559,18 @@ class Command(BaseCommand):
         )
         if created:
             vacancies.pay_vacancy(vacancy, now=now)
-            application = applications.apply_to_vacancy(vacancy, worker_a, now=now)
-            applications.approve_application(application, actor=None, now=now)
+            try:
+                with transaction.atomic():
+                    application = applications.apply_to_vacancy(vacancy, worker_a, now=now)
+                    applications.approve_application(application, actor=None, now=now)
+            except DomainError:
+                pass  # ex.: conflito de horário numa nova rodada; a vaga fica só publicada
 
         # 4. Aguardando pagamento.
         self._vacancy(
             company_b,
             "Reposição de estoque no Mercadão",
-            now + timedelta(days=4),
+            _whole_hour(now + timedelta(days=4)),
             4,
             now,
             category="VAREJO",

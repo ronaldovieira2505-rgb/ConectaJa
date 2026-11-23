@@ -202,3 +202,36 @@ def test_deadline_processing_after_seed_logs_no_warnings(caplog):
         process_deadlines()
 
     assert not caplog.records
+
+
+def test_running_again_days_later_refreshes_the_catalog():
+    # No site publicado o seed roda uma vez; dias depois as vagas já passaram.
+    run_seed()
+    later = timezone.now() + timedelta(days=10)
+    with patch("django.utils.timezone.now", return_value=later):
+        process_deadlines()
+        run_seed()
+
+        published = Vacancy.objects.filter(
+            status=Vacancy.Status.PUBLISHED, starts_at__gt=later
+        )
+        assert published.count() >= 12
+        assert published.filter(reopened=True).count() >= 1
+        in_progress = Vacancy.objects.filter(status=Vacancy.Status.IN_PROGRESS)
+        assert in_progress.filter(title="Conferência de mercadorias no recebimento").exists()
+        pending = Application.objects.filter(
+            status="PENDENTE", vacancy__starts_at__gt=later
+        )
+        assert pending.exists()
+
+        counts = Vacancy.objects.count()
+        run_seed()
+        assert Vacancy.objects.count() == counts
+
+
+def test_demo_shifts_start_on_the_hour():
+    run_seed()
+
+    for vacancy in Vacancy.objects.filter(status=Vacancy.Status.PUBLISHED):
+        local = timezone.localtime(vacancy.starts_at)
+        assert (local.minute, local.second) == (0, 0)

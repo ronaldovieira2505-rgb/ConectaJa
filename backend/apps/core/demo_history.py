@@ -9,6 +9,7 @@ se a plataforma estivesse em uso há algumas semanas.
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from django.db import transaction
 from django.utils import timezone
 
 from apps.core.exceptions import DomainError
@@ -369,18 +370,33 @@ def build_current_state(companies, workers, now):
     """Turno à espera de validação e candidaturas em aberto nas vagas futuras."""
     company_index, place, data, crew = AWAITING
     company = companies[company_index]
-    if not Vacancy.objects.filter(company=company, title=data["title"]).exists():
+    # Sem turno em andamento com esse título (o anterior já foi aprovado e pago), cria outro:
+    # assim "Confirmar presença" sempre tem o que mostrar na demonstração.
+    in_progress = Vacancy.objects.filter(
+        company=company, title=data["title"], status=Vacancy.Status.IN_PROGRESS
+    )
+    if not in_progress.exists():
         params = PlatformParameters.get()
         starts_at = (now - timedelta(hours=10)).replace(minute=0, second=0, microsecond=0)
-        vacancy = _create_paid(company, place, data, starts_at, 6,
-                               starts_at - timedelta(days=3))
-        staffed = _staff(vacancy, crew, workers, vacancy.created_at)
-        vacancy = _start(Vacancy.objects.get(pk=vacancy.pk), params)
-        for i, assignment in enumerate(staffed):
-            _work(assignment, vacancy, i)
+        try:
+            with transaction.atomic():
+                vacancy = _create_paid(company, place, data, starts_at, 6,
+                                       starts_at - timedelta(days=3))
+                staffed = _staff(vacancy, crew, workers, vacancy.created_at)
+                vacancy = _start(Vacancy.objects.get(pk=vacancy.pk), params)
+                for i, assignment in enumerate(staffed):
+                    _work(assignment, vacancy, i)
+        except DomainError:
+            pass  # conflito de horário de algum prestador: segue sem esse turno
 
     for title, keys, approve_first in OPEN_APPLICATIONS:
-        vacancy = Vacancy.objects.filter(title=title).first()
+        vacancy = (
+            Vacancy.objects.filter(
+                title=title, status=Vacancy.Status.PUBLISHED, starts_at__gt=now
+            )
+            .order_by("-pk")
+            .first()
+        )
         if vacancy is None or vacancy.applications.exists():
             continue
         created = []

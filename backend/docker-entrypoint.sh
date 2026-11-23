@@ -14,7 +14,8 @@ case "$command" in
         fi
 
         if [ "$SEED_DEMO" = "true" ]; then
-            python manage.py seed_demo
+            # Um erro nos dados de demonstração não pode derrubar o site.
+            python manage.py seed_demo || echo "seed_demo falhou; o site sobe mesmo assim" >&2
         fi
 
         # A senha do admin do seed_demo é pública (README); em produção ela vem do ambiente.
