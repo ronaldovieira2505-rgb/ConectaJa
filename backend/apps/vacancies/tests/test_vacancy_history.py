@@ -103,3 +103,18 @@ def test_unknown_vacancy_returns_404(client):
     client.force_login(make_admin())
     url = reverse("admin:vacancies_vacancy_full_history", args=[9999])
     assert client.get(url).status_code == 404
+
+
+def test_open_vacancy_shows_amount_still_held_instead_of_not_balanced(client):
+    """Com a vaga em andamento, a diferença é o valor ainda retido, e não um erro de conta."""
+    assignment = make_paid_ready_assignment()  # horas aprovadas, ainda sem liquidação
+    vacancy = assignment.vacancy
+    vacancy.refresh_from_db()
+    summary = financial_summary(vacancy)
+    assert summary["balanced"] is False
+    assert summary["open"] is True
+    assert summary["held_display"] == "R$ 100,00"
+    client.force_login(make_admin())
+    html = client.get(_url(vacancy)).content.decode()
+    assert "Em aberto: R$ 100,00 ainda retido" in html
+    assert "Não fecha" not in html
