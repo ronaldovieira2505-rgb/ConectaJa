@@ -1,7 +1,7 @@
 """Busca pública de vagas para o prestador (US12, US13, US14, US17)."""
 
 import unicodedata
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from zoneinfo import ZoneInfo
 
@@ -36,13 +36,16 @@ def normalize(text):
 def searchable_vacancies(now=None):
     """Vagas que aceitam candidaturas e ainda têm posição livre (lotadas ficam de fora)."""
     now = now or timezone.now()
+    # Mesmo critério de `Vacancy.accepts_applications`: a vaga sai da busca quando as candidaturas
+    # encerram, mesmo que o processamento de prazos ainda não tenha mudado o estado dela.
+    close_at = now + timedelta(minutes=PlatformParameters.get().applications_close_minutes_before)
     qs = (
         Vacancy.objects.filter(
-            Q(status=V.PUBLISHED)
+            Q(status=V.PUBLISHED, starts_at__gt=close_at)
             | Q(
                 reopened=True,
                 ends_at__gt=now,
-                status__in=(V.APPLICATIONS_CLOSED, V.IN_PROGRESS),
+                status__in=(V.PUBLISHED, V.APPLICATIONS_CLOSED, V.IN_PROGRESS),
             )
         )
         .select_related("company", "custody")

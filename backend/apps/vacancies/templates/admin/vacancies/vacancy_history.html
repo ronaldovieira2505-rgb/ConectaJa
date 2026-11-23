@@ -16,7 +16,7 @@
     <tr><th>Estornado</th><td>{{ summary.refunded_display }}</td></tr>
     <tr>
       <th>RETENÇÃO = REPASSES + TAXAS + ESTORNOS</th>
-      <td id="invariant">{% if summary.balanced %}Fecha{% else %}Não fecha{% endif %}</td>
+      <td id="invariant">{% if summary.balanced %}Fecha{% elif summary.open %}Em aberto: {{ summary.held_display }} ainda retido até o fim da vaga{% else %}Não fecha{% endif %}</td>
     </tr>
   </table>
 

@@ -212,6 +212,9 @@ def financial_summary(vacancy):
         "fees_display": format_brl(fees),
         "refunded_display": format_brl(refunded),
         "balanced": retained == paid_out + fees + refunded,
+        # Enquanto a vaga não termina, a diferença é o valor ainda retido, e não um erro.
+        "open": vacancy.status not in (Vacancy.Status.FINISHED, Vacancy.Status.CANCELLED),
+        "held_display": format_brl(retained - paid_out - fees - refunded),
     }
 
 

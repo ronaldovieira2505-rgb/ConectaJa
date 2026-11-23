@@ -223,3 +223,16 @@ def test_create_still_requires_company():
     client = APIClient()
     client.force_login(worker.user)
     assert client.post(URL, {}, format="json").status_code == 403
+
+
+def test_vacancy_leaves_search_when_applications_close_even_if_deadlines_are_late():
+    """O processamento de prazos atrasado não pode deixar uma vaga encerrada na busca."""
+    soon = published(title="Começa já")
+    later = published(title="Começa depois")
+    # As candidaturas fecham 120 min antes; a vaga "soon" passa a começar em 1 h, ainda PUBLICADA.
+    Vacancy.objects.filter(pk=soon.pk).update(starts_at=now() + timedelta(hours=1))
+    titles = [r["title"] for r in results()]
+    assert "Começa depois" in titles
+    assert "Começa já" not in titles
+    assert Vacancy.objects.get(pk=soon.pk).status == Vacancy.Status.PUBLISHED
+    assert later.status == Vacancy.Status.PUBLISHED
