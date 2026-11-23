@@ -82,6 +82,9 @@ def test_removing_deletes_the_photo_and_the_file(private_media, django_capture_o
         (b"%PDF-1.4" + b"\x00" * 64, "obra.pdf", "JPG, PNG ou WebP"),
         (b"\x89PNG\r\n\x1a\n" + b"\x00" * (5 * 1024 * 1024), "grande.png", "5 MB"),
     ],
+    # Nomes curtos: sem isso o pytest usa os 5 MB de bytes como nome do caso, e o Windows
+    # recusa uma variável de ambiente desse tamanho (PYTEST_CURRENT_TEST).
+    ids=["nao-e-imagem", "grande-demais"],
 )
 def test_invalid_file_shows_error_and_saves_nothing(content, name, message):
     worker = make_worker()
