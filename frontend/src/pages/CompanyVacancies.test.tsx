@@ -80,8 +80,8 @@ describe('Vagas da empresa', () => {
 
     await userEvent.type(await screen.findByLabelText('Título'), 'Carga e descarga')
     await userEvent.type(screen.getByLabelText('Descrição do escopo'), 'Descarregar')
-    await userEvent.type(screen.getByLabelText('Latitude'), '-23.55')
-    await userEvent.type(screen.getByLabelText('Longitude'), '-46.63')
+    await userEvent.type(screen.getByLabelText('Latitude (opcional)'), '-23.55')
+    await userEvent.type(screen.getByLabelText('Longitude (opcional)'), '-46.63')
     await userEvent.type(screen.getByLabelText('Início'), '2026-11-03T09:00')
     await userEvent.type(screen.getByLabelText('Fim'), '2026-11-03T13:00')
     await userEvent.type(screen.getByLabelText('Valor por pessoa (R$)'), '100,00')

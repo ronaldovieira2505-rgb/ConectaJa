@@ -184,6 +184,9 @@ PAYMENT_GATEWAY = os.environ.get(
 
 CNPJ_LOOKUP = os.environ.get("CNPJ_LOOKUP", "integrations.cnpj.brasilapi.BrasilApiCnpjLookup")
 
+# Coordenadas da vaga a partir do endereço, quando a empresa não informa latitude e longitude.
+GEOCODER = os.environ.get("GEOCODER", "integrations.geo.geocoder.NominatimGeocoder")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {

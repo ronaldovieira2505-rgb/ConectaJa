@@ -27,6 +27,7 @@ from apps.vacancies import favorites, photos, search, services
 from apps.vacancies.models import Assignment, Vacancy
 from apps.vacancies.review_services import company_rating_summary
 from apps.workers.availability import has_availability
+from integrations.geo.geocoder import GeocodingError, get_geocoder
 from integrations.payments import PaymentGatewayError
 
 PENDING_COMPANY = "Cadastro em análise"
@@ -52,11 +53,22 @@ class VacancySerializer(serializers.Serializer):
     city = serializers.CharField(max_length=100, required=False, allow_blank=True)
     state = serializers.CharField(max_length=2, required=False, allow_blank=True)
     zip_code = serializers.RegexField(r"^\d{0,8}$", required=False, allow_blank=True)
+    # Opcionais: sem coordenadas, o ponto do check-in é buscado pelo endereço.
     latitude = serializers.DecimalField(
-        max_digits=9, decimal_places=6, min_value=Decimal("-90"), max_value=Decimal("90")
+        max_digits=9,
+        decimal_places=6,
+        min_value=Decimal("-90"),
+        max_value=Decimal("90"),
+        required=False,
+        allow_null=True,
     )
     longitude = serializers.DecimalField(
-        max_digits=9, decimal_places=6, min_value=Decimal("-180"), max_value=Decimal("180")
+        max_digits=9,
+        decimal_places=6,
+        min_value=Decimal("-180"),
+        max_value=Decimal("180"),
+        required=False,
+        allow_null=True,
     )
     starts_at = serializers.DateTimeField()
     ends_at = serializers.DateTimeField()
@@ -77,6 +89,58 @@ class VacancySerializer(serializers.Serializer):
 
     def validate_equipment_notes(self, value):
         return clean_or_400(equipment_rules.clean_notes, value)
+
+    def to_internal_value(self, data):
+        return super().to_internal_value(blank_coordinates_as_null(data))
+
+    def validate(self, attrs):
+        has_lat = attrs.get("latitude") is not None
+        has_lng = attrs.get("longitude") is not None
+        if has_lat != has_lng:
+            raise serializers.ValidationError(ONE_COORDINATE)
+        if not has_lat:
+            attrs["latitude"], attrs["longitude"] = coordinates_from_address(attrs)
+        return attrs
+
+
+ONE_COORDINATE = "Informe latitude e longitude juntas, ou deixe as duas em branco."
+ADDRESS_NEEDED = (
+    "Informe endereço, número e cidade, ou use \"Usar minha localização\" para marcar o local."
+)
+ADDRESS_NOT_FOUND = (
+    "Não encontramos esse endereço no mapa. Confira rua, número e cidade, ou use "
+    "\"Usar minha localização\"."
+)
+
+
+def blank_coordinates_as_null(data):
+    """O formulário manda latitude e longitude vazias como texto em branco: viram nulas."""
+    if not hasattr(data, "get"):
+        return data
+    keys = ("latitude", "longitude")
+    blank = [k for k in keys if k in data and str(data.get(k) or "").strip() == ""]
+    if not blank:
+        return data
+    data = data.copy()
+    for key in blank:
+        data[key] = None
+    return data
+
+
+def coordinates_from_address(attrs):
+    street, city = (attrs.get("street") or "").strip(), (attrs.get("city") or "").strip()
+    if not street or not city:
+        raise serializers.ValidationError(ADDRESS_NEEDED)
+    try:
+        return get_geocoder().geocode(
+            street=street,
+            number=(attrs.get("number") or "").strip(),
+            city=city,
+            state=(attrs.get("state") or "").strip(),
+            zip_code=(attrs.get("zip_code") or "").strip(),
+        )
+    except GeocodingError:
+        raise serializers.ValidationError(ADDRESS_NOT_FOUND) from None
 
 
 def clean_or_400(cleaner, value):
@@ -312,7 +376,10 @@ class VacancyDetailView(PublicReadMixin, CompanyAreaView):
             return Response({"detail": "Vaga não encontrada."}, status=404)
         if any(name in request.data for name in READ_ONLY_FIELDS):
             return Response({"detail": READ_ONLY_MESSAGE}, status=400)
-        serializer = VacancyEditSerializer(data=request.data, partial=True)
+        data = blank_coordinates_as_null(request.data)
+        if hasattr(data, "get") and data.get("latitude") is None and data.get("longitude") is None:
+            data = {k: v for k, v in data.items() if k not in ("latitude", "longitude")}
+        serializer = VacancyEditSerializer(data=data, partial=True)
         if not serializer.is_valid():
             return Response(
                 {"detail": first_error(serializer.errors), "errors": serializer.errors}, status=400

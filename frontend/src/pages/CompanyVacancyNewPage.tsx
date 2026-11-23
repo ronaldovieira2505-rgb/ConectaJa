@@ -206,10 +206,13 @@ export default function CompanyVacancyNewPage() {
             <Field label="UF" maxLength={2} value={form.state} onChange={set('state')} />
           </div>
           <div className="grade grade-2">
-            <Field label="Latitude" value={form.latitude} onChange={set('latitude')} />
-            <Field label="Longitude" value={form.longitude} onChange={set('longitude')} />
+            <Field label="Latitude (opcional)" value={form.latitude} onChange={set('latitude')} />
+            <Field label="Longitude (opcional)" value={form.longitude} onChange={set('longitude')} />
           </div>
-          <p className="sub">As coordenadas definem onde o check-in é aceito.</p>
+          <p className="sub">
+            As coordenadas definem onde o check-in é aceito. Se ficarem em branco, buscamos o ponto
+            pelo endereço.
+          </p>
           <Button type="button" variant="secondary" onClick={useMyLocation} disabled={locating}>
             {locating ? 'Localizando...' : 'Usar minha localização'}
           </Button>
